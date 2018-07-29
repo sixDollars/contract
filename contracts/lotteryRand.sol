@@ -1,6 +1,6 @@
 pragma solidity ^0.4.21;
 
-/*
+/**
 import "github.com/oraclize/ethereum-api/oraclizeAPI.sol";
 
 contract RandomLottery is usingOraclize {
