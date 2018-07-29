@@ -41,7 +41,7 @@ address private creator;
 lotteryCtrl m_lotteryCtrl;
 bool locked;
 
-constructor() {
+constructor() public {
     creator = msg.sender;
     m_lotteryCtrl.fatalErr                   = false;
     m_lotteryCtrl.maxAllowedWagerPerGame     = 10000000;
@@ -74,31 +74,31 @@ modifier gameIsNotStarted(address game) {
 }
 
 
-function setMaxAllowedWagerPerGame(uint16 wager)  onlyCreator {
+function setMaxAllowedWagerPerGame(uint16 wager)  public onlyCreator {
     m_lotteryCtrl.maxAllowedWagerPerGame = wager;
 }
 
-function setMaxAllowedWagerForContract(uint16 maxWagerForContract)  onlyCreator {
+function setMaxAllowedWagerForContract(uint16 maxWagerForContract) public onlyCreator {
     m_lotteryCtrl.maxAllowedWagerForContract = maxWagerForContract;
 }
 
-function setMaxBetNumbers(uint16 maxBetNum) onlyCreator {
+function setMaxBetNumbers(uint16 maxBetNum) public onlyCreator {
     m_lotteryCtrl.maxBetNumbers  = maxBetNum;
 }
 
-function setMaxAllowedTimePerGame(uint16 maxDuration) onlyCreator {
+function setMaxAllowedTimePerGame(uint16 maxDuration) public onlyCreator {
     m_lotteryCtrl.maxAllowedTimePerGame  = maxDuration;
 }
 
-function setMinAcceptableFee(uint16 minAcceptFee) onlyCreator {
+function setMinAcceptableFee(uint16 minAcceptFee) public onlyCreator {
     m_lotteryCtrl.minAcceptFee = minAcceptFee;
 }
 
-function adminOperContract(bool enContract) onlyCreator {//disable contract balance transfer if any unexpect ocurred
+function adminOperContract(bool enContract) public onlyCreator {//disable contract balance transfer if any unexpect ocurred
     m_lotteryCtrl.fatalErr = enContract;
 }
 
-function showLotteryCtrl() onlyCreator view returns (bool contractCtrl, uint32 maxAllowedWagerPerGame,
+function showLotteryCtrl() public onlyCreator view returns (bool contractCtrl, uint32 maxAllowedWagerPerGame,
                                                      uint32 maxAllowedWagerForContract, uint16 maxBetNumbers,
                                                      uint32 maxAllowedTimePerGame, uint16 minAcceptFee) {
     return (m_lotteryCtrl.fatalErr,m_lotteryCtrl.maxAllowedWagerPerGame,
@@ -106,12 +106,12 @@ function showLotteryCtrl() onlyCreator view returns (bool contractCtrl, uint32 m
             m_lotteryCtrl.maxAllowedTimePerGame,m_lotteryCtrl.minAcceptFee);
 }
 
-function showCreator()  returns (address) {
+function showCreator() public view returns (address) {
     return creator;
 }
 
-function isGameCreatedByAddr(address gamber) private returns (bool isCreated) {
-    isCreated = (gameGrpDB[msg.sender].gamers[0] != 0);
+function isGameCreatedByAddr(address gamber) private view returns (bool isCreated) {
+    isCreated = (gameGrpDB[gamber].gamers[0] != 0);
 }
 
 function isAddrJoinGame(address addr, address game) private view returns(bool) {
@@ -127,14 +127,14 @@ function isAddrJoinGame(address addr, address game) private view returns(bool) {
 function createGame(uint16 allowedWager)  public returns (bool createResult)  {
     bool isCreated = isGameCreatedByAddr(msg.sender);
     if(isCreated == true) {
-       gamblerEvent(msg.sender, now, allowedWager, "not allowed to create two or more games if the previous created game not finished!");
+       emit gamblerEvent(msg.sender, now, allowedWager, "not allowed to create two or more games if the previous created game not finished!");
        return false;
     }
 
     //if creator have enough balance, he can creat the game successfully
     if(msg.sender.balance >= allowedWager) {
           if(!transferToContract(allowedWager)) {
-                gamblerEvent(msg.sender, now, allowedWager, "transfer wager from game creator to contract failed!");
+                emit gamblerEvent(msg.sender, now, allowedWager, "transfer wager from game creator to contract failed!");
                 return false;
           }
           gameGroup storage game;
@@ -145,29 +145,29 @@ function createGame(uint16 allowedWager)  public returns (bool createResult)  {
           game._gameInfo[msg.sender].betValue      = 255;//indicates this gamer has not bet yet
           game.gamers.push(msg.sender);
           gameGrpDB[msg.sender]        = game;
-          gamblerEvent(msg.sender, now, uint16(game.gameStartTime), "Create a game with wager successfully!");
+          emit gamblerEvent(msg.sender, now, uint16(game.gameStartTime), "Create a game with wager successfully!");
           return true;
           }
      else {
-          gamblerEvent(msg.sender, now, allowedWager, "unable to create the game due to game creator has no enough balance!");
+          emit gamblerEvent(msg.sender, now, allowedWager, "unable to create the game due to game creator has no enough balance!");
           return false;
      }
 } 
 
-function transferToContract(uint amount) payable noReentrancy returns(bool) {
+function transferToContract(uint amount) public payable noReentrancy returns(bool) {
     return creator.send(amount);
 }
 
 function  joinGame(address gameCreator) public payable gameIsNotStarted(gameCreator) returns (bool joinResult) { //Join a game which is created by gameCreator
     bool isGameExist = isGameCreatedByAddr(gameCreator);
     if(!isGameExist) {
-        gamblerEvent(msg.sender, now, 0, "try to join a non-existing game!");
+        emit gamblerEvent(msg.sender, now, 0, "try to join a non-existing game!");
         return false;//join fail
     }
 
     bool isJoinGame = isAddrJoinGame(msg.sender, gameCreator);
     if(isJoinGame) {
-          gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"already join the game before, no need join again!");
+          emit gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"already join the game before, no need join again!");
           return true;
     }
 
@@ -177,15 +177,15 @@ function  joinGame(address gameCreator) public payable gameIsNotStarted(gameCrea
         gameGrpDB[gameCreator]._gameInfo[msg.sender].state = gameState.INITIATED;
         gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue = 255;//indicates this gamer has not bet yet
         if(transferToContract(gameGrpDB[gameCreator].allowedWagerForThisGame)) {
-            gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"join a game successfully!");
+            emit gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"join a game successfully!");
             return true;
         } else {
-            gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"join a game successfully!");
+            emit gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"join a game successfully!");
             return false;
         }
     }
     else {
-        gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"do not have enough money to join the game!");
+        emit gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"do not have enough money to join the game!");
         return false;
     }
 }
@@ -194,16 +194,16 @@ function addGamer()  public noReentrancy gameIsNotStarted(msg.sender) returns(bo
     bool isGameExist = isGameCreatedByAddr(msg.sender);
 
     if(!isGameExist) {
-         gamblerEvent(msg.sender, now, 0,"Only game creator can add contract as a partner!");
+         emit gamblerEvent(msg.sender, now, 0,"Only game creator can add contract as a partner!");
          return false;
     }
 
     if(creator.balance >= 100*gameGrpDB[msg.sender].allowedWagerForThisGame && gameGrpDB[msg.sender].allowedWagerForThisGame <=  200000) { //Game creator can  add contract as a partner only when contract has enough balance and the associated game wager is less than 200000
           if(isAddrJoinGame(creator, msg.sender)) {
-              gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"contract already joined in!");
+              emit gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"contract already joined in!");
               return false;
           }  else {
-              gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"add contract to the game!");
+              emit gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"add contract to the game!");
               gameGrpDB[msg.sender].gamers.push(creator);
               gameGrpDB[msg.sender]._gameInfo[creator].state = gameState.INITIATED;
               gameGrpDB[msg.sender]._gameInfo[creator].betValue = 255;
@@ -212,30 +212,30 @@ function addGamer()  public noReentrancy gameIsNotStarted(msg.sender) returns(bo
     }
 
     //need check if gamer has enough balance to join the game? YES
-    gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"contract not meet the requirments to join a game!");
+    emit gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"contract not meet the requirments to join a game!");
     return false;
 }
 
-function startGame() onlyGameCreator(msg.sender) {
+function startGame() public onlyGameCreator(msg.sender) {
      gameGrpDB[msg.sender].gameStarted = true;
      gameGrpDB[msg.sender].gameStartTime = now;
-     gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"game is starting...");
+     emit gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"game is starting...");
 }
 
-function bet(address gameCreator) {
+function bet(address gameCreator) public {
      if(!isAddrJoinGame(msg.sender, gameCreator)) {
-         gamblerEvent(msg.sender, now, 0,"gamer is not join the game, cannot bet...");
+         emit gamblerEvent(msg.sender, now, 0,"gamer is not join the game, cannot bet...");
          return;
      }
 
      if( now - gameGrpDB[gameCreator].gameStartTime >= m_lotteryCtrl.maxAllowedTimePerGame ) {
-         gamblerEvent(msg.sender, now, 0,"game is timeout, cannot bet any more!");
+         emit gamblerEvent(msg.sender, now, 0,"game is timeout, cannot bet any more!");
          determineWinner(gameCreator,true);
          return;
      }
 
      uint betValue = getLotteryRand();
-     gamblerEvent(msg.sender, now, uint16(betValue),"gamer bet a number!");
+     emit gamblerEvent(msg.sender, now, uint16(betValue),"gamer bet a number!");
      gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue = uint8(betValue);
      gameGrpDB[gameCreator].maxBetNum =  gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue >  gameGrpDB[gameCreator].maxBetNum ? gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue:gameGrpDB[gameCreator].maxBetNum;
            
@@ -253,7 +253,7 @@ function determineWinner(address gameCreator, bool endGame) private returns(bool
              if(gameGrpDB[gameCreator]._gameInfo[gameGrpDB[gameCreator].gamers[i]].betValue == 255) {
                  if(endGame == false) {
                      gamend = false;
-                     gamblerEvent(gameCreator, now, 0,"game has not completed yet!");
+                     emit gamblerEvent(gameCreator, now, 0,"game has not completed yet!");
                  }
              }
 
@@ -278,14 +278,14 @@ function determineWinner(address gameCreator, bool endGame) private returns(bool
      }
 }
 
-function deleteGame() onlyGameCreator(msg.sender) {
+function deleteGame() public onlyGameCreator(msg.sender) {
     delete gameGrpDB[msg.sender];
 }
 
-function stopGame() onlyGameCreator(msg.sender) {
+function stopGame() public onlyGameCreator(msg.sender) {
     if(now -  gameGrpDB[msg.sender] .gameStartTime >= 10 minutes) {
        determineWinner(msg.sender,true);
-       gamblerEvent(msg.sender, now, 0,"game is forced to stop for game timeout!");
+       emit gamblerEvent(msg.sender, now, 0,"game is forced to stop for game timeout!");
     }
 }
 

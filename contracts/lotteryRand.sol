@@ -54,7 +54,7 @@ contract RandomLottery is usingOraclize {
 }
 */
 contract RandomLottery  {
-    function getLotteryRand() internal returns (uint random) {
+    function getLotteryRand() internal view returns (uint random) {
 /*       bytes storage current = bytes(now);
        bytes32 random1 = sha256(current);
        bytes storage current2 = bytes(now);
