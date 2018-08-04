@@ -4,7 +4,7 @@ import "./lotteryRand.sol";
 
 contract lottery is RandomLottery {
 
-event gamblerEvent(address gambler, uint timeStamp, uint16 value, string description);
+event gamblerEvent(address gambler, uint timeStamp, uint value, string description);
 
 struct lotteryCtrl {
 bool  fatalErr; // Fatal error coccurs, then stopping transfer balance from contract account
@@ -34,21 +34,24 @@ bool  gameStarted;
 mapping (address => gameInfo)  _gameInfo; 
 uint16 allowedWagerForThisGame;  // allowed wager for this game            本次游戏需要的赌金
 address[] gamers; //list of persons who join the game. The first index inceates the game creator by default. //每个游戏组可以有任意数量的参与者，参与者数量由game创建者决定
-}
+} 
 
 mapping (address => gameGroup) gameGrpDB;//Stores all the currently on-going games; Store in memory to reduce Gas spendded
 address private creator;
+address private contractAccount;
 lotteryCtrl m_lotteryCtrl;
 bool locked;
 
-constructor() public {
+constructor() public { 
     creator = msg.sender;
+    contractAccount = address(0x26f66e0ea41a1490e70f8ea755495f50d35355f7);
     m_lotteryCtrl.fatalErr                   = false;
     m_lotteryCtrl.maxAllowedWagerPerGame     = 10000000;
     m_lotteryCtrl.maxAllowedWagerForContract = 5000000;
     m_lotteryCtrl.maxBetNumbers              = 500;
     m_lotteryCtrl.maxAllowedTimePerGame      = 30*60*60; //30 minutes
     m_lotteryCtrl.minAcceptFee               = 30000;
+    locked = false;
 }
 
 modifier onlyCreator() {
@@ -73,29 +76,43 @@ modifier gameIsNotStarted(address game) {
     _;
 }
 
+function setContractAccount(address addr) public onlyCreator returns(bool) {
+    contractAccount = addr;
+    emit gamblerEvent(msg.sender, now, 0, "Set contract account successfully!");
+    return true;
+}
 
-function setMaxAllowedWagerPerGame(uint16 wager)  public onlyCreator {
+function showContractBalance() public view onlyCreator returns(uint) {
+    return contractAccount.balance;
+}
+
+function setMaxAllowedWagerPerGame(uint16 wager)  public onlyCreator returns(uint16){
     m_lotteryCtrl.maxAllowedWagerPerGame = wager;
+    return wager;
 }
 
-function setMaxAllowedWagerForContract(uint16 maxWagerForContract) public onlyCreator {
+function setMaxAllowedWagerForContract(uint16 maxWagerForContract) public onlyCreator returns(uint16){
     m_lotteryCtrl.maxAllowedWagerForContract = maxWagerForContract;
+    return maxWagerForContract;
 }
 
-function setMaxBetNumbers(uint16 maxBetNum) public onlyCreator {
+function setMaxBetNumbers(uint16 maxBetNum) public onlyCreator  returns(uint16){
     m_lotteryCtrl.maxBetNumbers  = maxBetNum;
+    return maxBetNum;
 }
 
-function setMaxAllowedTimePerGame(uint16 maxDuration) public onlyCreator {
+function setMaxAllowedTimePerGame(uint16 maxDuration) public onlyCreator returns(uint16){
     m_lotteryCtrl.maxAllowedTimePerGame  = maxDuration;
+    return maxDuration;
 }
 
 function setMinAcceptableFee(uint16 minAcceptFee) public onlyCreator {
     m_lotteryCtrl.minAcceptFee = minAcceptFee;
 }
 
-function adminOperContract(bool enContract) public onlyCreator {//disable contract balance transfer if any unexpect ocurred
+function adminOperContract(bool enContract) public onlyCreator returns(string){//disable contract balance transfer if any unexpect ocurred
     m_lotteryCtrl.fatalErr = enContract;
+    return "game encounter an panic and admin down itself";
 }
 
 function showLotteryCtrl() public onlyCreator view returns (bool contractCtrl, uint32 maxAllowedWagerPerGame,
@@ -111,7 +128,7 @@ function showCreator() public view returns (address) {
 }
 
 function isGameCreatedByAddr(address gamber) private view returns (bool isCreated) {
-    isCreated = (gameGrpDB[gamber].gamers[0] != 0);
+    isCreated = (gameGrpDB[gamber].gamers.length > 0 && gameGrpDB[gamber].gamers[0] != 0);
 }
 
 function isAddrJoinGame(address addr, address game) private view returns(bool) {
@@ -124,8 +141,10 @@ function isAddrJoinGame(address addr, address game) private view returns(bool) {
     return false;
 }
 
-function createGame(uint16 allowedWager)  public returns (bool createResult)  {
+function createGame(uint16 allowedWager)  public payable returns (bool createResult)  {
+
     bool isCreated = isGameCreatedByAddr(msg.sender);
+    emit gamblerEvent(msg.sender, now, allowedWager, "after isGameCreateByAddr!");
     if(isCreated == true) {
        emit gamblerEvent(msg.sender, now, allowedWager, "not allowed to create two or more games if the previous created game not finished!");
        return false;
@@ -133,19 +152,21 @@ function createGame(uint16 allowedWager)  public returns (bool createResult)  {
 
     //if creator have enough balance, he can creat the game successfully
     if(msg.sender.balance >= allowedWager) {
+          emit gamblerEvent(msg.sender, now, allowedWager, "msg.sender.balance >= allowedWager!");
           if(!transferToContract(allowedWager)) {
                 emit gamblerEvent(msg.sender, now, allowedWager, "transfer wager from game creator to contract failed!");
                 return false;
           }
           gameGroup storage game;
+          emit gamblerEvent(msg.sender, now, allowedWager, "define gameGroup storage game!");
           game.allowedWagerForThisGame = allowedWager;
           game.gameStartTime           = now;
           game.maxBetNum               = 0;
           game._gameInfo[msg.sender].state         = gameState.INITIATED;
-          game._gameInfo[msg.sender].betValue      = 255;//indicates this gamer has not bet yet
+          game._gameInfo[msg.sender].betValue      = 255;///indicates this gamer has not bet yet
           game.gamers.push(msg.sender);
           gameGrpDB[msg.sender]        = game;
-          emit gamblerEvent(msg.sender, now, uint16(game.gameStartTime), "Create a game with wager successfully!");
+          emit gamblerEvent(msg.sender, now, (game.gameStartTime), "Create a game with wager successfully!");
           return true;
           }
      else {
@@ -154,8 +175,13 @@ function createGame(uint16 allowedWager)  public returns (bool createResult)  {
      }
 } 
 
-function transferToContract(uint amount) public payable noReentrancy returns(bool) {
-    return creator.send(amount);
+function transferToContract(uint amount) public noReentrancy payable returns(bool) {
+    emit gamblerEvent(msg.sender, now, amount, "transfer digital money to contract");
+    emit gamblerEvent(contractAccount, now, amount, "transfer digital money to contract");
+    emit gamblerEvent(contractAccount, now, address(this).balance, "transfer digital money to contract");
+    emit gamblerEvent(contractAccount, now, msg.sender.balance, "transfer digital money to contract");
+    contractAccount.transfer(amount);
+    return true;
 }
 
 function  joinGame(address gameCreator) public payable gameIsNotStarted(gameCreator) returns (bool joinResult) { //Join a game which is created by gameCreator
@@ -216,30 +242,36 @@ function addGamer()  public noReentrancy gameIsNotStarted(msg.sender) returns(bo
     return false;
 }
 
-function startGame() public onlyGameCreator(msg.sender) {
+function startGame() public onlyGameCreator(msg.sender) returns(string) {
      gameGrpDB[msg.sender].gameStarted = true;
      gameGrpDB[msg.sender].gameStartTime = now;
      emit gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"game is starting...");
+     return "starting game ...";
 }
 
-function bet(address gameCreator) public {
+function bet(address gameCreator) public returns(bool) {
      if(!isAddrJoinGame(msg.sender, gameCreator)) {
          emit gamblerEvent(msg.sender, now, 0,"gamer is not join the game, cannot bet...");
-         return;
+         return false;
+     }
+
+     if(gameGrpDB[gameCreator].gameStarted != true) {
+         emit gamblerEvent(msg.sender, now, 0, "game is not started yet!");
+         return false;
      }
 
      if( now - gameGrpDB[gameCreator].gameStartTime >= m_lotteryCtrl.maxAllowedTimePerGame ) {
          emit gamblerEvent(msg.sender, now, 0,"game is timeout, cannot bet any more!");
          determineWinner(gameCreator,true);
-         return;
+         return false;
      }
 
      uint betValue = getLotteryRand();
-     emit gamblerEvent(msg.sender, now, uint16(betValue),"gamer bet a number!");
+     emit gamblerEvent(msg.sender, now, betValue,"gamer bet a number!");
      gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue = uint8(betValue);
      gameGrpDB[gameCreator].maxBetNum =  gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue >  gameGrpDB[gameCreator].maxBetNum ? gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue:gameGrpDB[gameCreator].maxBetNum;
            
-     determineWinner(gameCreator,false);
+     return determineWinner(gameCreator,false);
 }
 
 function determineWinner(address gameCreator, bool endGame) private returns(bool){
@@ -278,15 +310,36 @@ function determineWinner(address gameCreator, bool endGame) private returns(bool
      }
 }
 
-function deleteGame() public onlyGameCreator(msg.sender) {
+function deleteGame() public onlyGameCreator(msg.sender) returns(bool){
     delete gameGrpDB[msg.sender];
+    return true;
 }
 
-function stopGame() public onlyGameCreator(msg.sender) {
+function stopGame() public onlyGameCreator(msg.sender) returns(bool) {
     if(now -  gameGrpDB[msg.sender] .gameStartTime >= 10 minutes) {
        determineWinner(msg.sender,true);
        emit gamblerEvent(msg.sender, now, 0,"game is forced to stop for game timeout!");
+       return true;
     }
+    return false;
+}
+
+function withDraw(address to, uint16 amount) public onlyCreator payable {
+    require(to != creator && to != address(this));
+    emit gamblerEvent(msg.sender,now,amount,"trying to withdraw ether from contract");
+    if(creator.balance >= amount) {
+    to.transfer(amount);
+    } else {
+    emit gamblerEvent(msg.sender, now, amount, "withdraw ether from contract fail");
+    }
+}
+
+function () payable {//fallback function
+    emit gamblerEvent(msg.sender, now, 0, "fallback function is called!");
+    emit gamblerEvent(msg.sender, now, uint16(msg.value), "fallback function is called!");
+    address mycontract = address(this);   
+    mycontract.transfer(msg.value);
+    emit gamblerEvent(msg.sender, now, mycontract.balance, "fallback function is called!");
 }
 
 }
