@@ -325,21 +325,19 @@ function stopGame() public onlyGameCreator(msg.sender) returns(bool) {
     return false;
 }
 
-function withDraw(address to, uint16 amount) public onlyCreator payable {
+function withDraw(address to, uint amount) public onlyCreator balanceSufficient(msg.sender, amount) payable {
     require(to != creator && to != address(this));
     emit gamblerEvent(msg.sender,now,amount,"trying to withdraw ether from contract");
-    if(creator.balance >= amount) {
     to.transfer(amount);
-    } else {
-    emit gamblerEvent(msg.sender, now, amount, "withdraw ether from contract fail");
-    }
+    emit gamblerEvent(msg.sender,now,amount,"withdraw ether from contract successfully");
 }
 
 function () payable {//fallback function
     emit gamblerEvent(msg.sender, now, 0, "fallback function is called!");
-    emit gamblerEvent(msg.sender, now, uint16(msg.value), "fallback function is called!");
-    address mycontract = address(this);   
-    mycontract.transfer(msg.value);
+    emit gamblerEvent(msg.sender, now, msg.value, "fallback function is called!");
+       
+    contractAccount.transfer(msg.value);
+    gamerBalance[msg.sender] += msg.value;
     emit gamblerEvent(msg.sender, now, mycontract.balance, "fallback function is called!");
 }
 
