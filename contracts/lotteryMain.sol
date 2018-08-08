@@ -36,7 +36,8 @@ uint16 allowedWagerForThisGame;  // allowed wager for this game            本�
 address[] gamers; //list of persons who join the game. The first index inceates the game creator by default. //每个游戏组可以有任意数量的参与者，参与者数量由game创建者决定
 } 
 
-mapping (address => gameGroup) gameGrpDB;//Stores all the currently on-going games; Store in memory to reduce Gas spendded
+mapping (address => gameGroup) gameGrpDB;//Stores all the currently on-going games; Store in memory to reduce Gas spent
+mapping (address => uint     ) gamerBalance;//balance for each gamer, to create/join one game one should deposit enough digital currency firstly.
 address private creator;
 address private contractAccount;
 lotteryCtrl m_lotteryCtrl;
@@ -69,6 +70,11 @@ modifier noReentrancy() {
     locked = true;
     _;
     locked = false;
+}
+
+modifier balanceSufficient(address gamer, uint threshold) {
+    require(gamerBalance[gamer] > threshold,"not enough balance");
+    _;
 }
 
 modifier gameIsNotStarted(address game) {
@@ -141,7 +147,7 @@ function isAddrJoinGame(address addr, address game) private view returns(bool) {
     return false;
 }
 
-function createGame(uint16 allowedWager)  public payable returns (bool createResult)  {
+function createGame(uint allowedWager)  public payable balanceSufficient(msg.sender, allowedWager) returns (bool createResult)  {
 
     bool isCreated = isGameCreatedByAddr(msg.sender);
     emit gamblerEvent(msg.sender, now, allowedWager, "after isGameCreateByAddr!");
@@ -150,37 +156,32 @@ function createGame(uint16 allowedWager)  public payable returns (bool createRes
        return false;
     }
 
-    //if creator have enough balance, he can creat the game successfully
-    if(msg.sender.balance >= allowedWager) {
-          emit gamblerEvent(msg.sender, now, allowedWager, "msg.sender.balance >= allowedWager!");
-          if(!transferToContract(allowedWager)) {
-                emit gamblerEvent(msg.sender, now, allowedWager, "transfer wager from game creator to contract failed!");
-                return false;
-          }
-          gameGroup storage game;
-          emit gamblerEvent(msg.sender, now, allowedWager, "define gameGroup storage game!");
-          game.allowedWagerForThisGame = allowedWager;
-          game.gameStartTime           = now;
-          game.maxBetNum               = 0;
-          game._gameInfo[msg.sender].state         = gameState.INITIATED;
-          game._gameInfo[msg.sender].betValue      = 255;///indicates this gamer has not bet yet
-          game.gamers.push(msg.sender);
-          gameGrpDB[msg.sender]        = game;
-          emit gamblerEvent(msg.sender, now, (game.gameStartTime), "Create a game with wager successfully!");
-          return true;
-          }
-     else {
-          emit gamblerEvent(msg.sender, now, allowedWager, "unable to create the game due to game creator has no enough balance!");
-          return false;
-     }
+    emit gamblerEvent(msg.sender, now, allowedWager, "msg.sender.balance >= allowedWager!");
+    if(!transferToContract(allowedWager)) {
+           emit gamblerEvent(msg.sender, now, allowedWager, "transfer wager from game creator to contract failed!");
+           return false;
+    }
+    gameGroup storage game;
+    emit gamblerEvent(msg.sender, now, allowedWager, "define gameGroup storage game!");
+    game.allowedWagerForThisGame = allowedWager;
+    game.gameStartTime           = now;
+    game.maxBetNum               = 0;
+    game._gameInfo[msg.sender].state         = gameState.INITIATED;
+    game._gameInfo[msg.sender].betValue      = 255;///indicates this gamer has not bet yet
+    game.gamers.push(msg.sender);
+    gameGrpDB[msg.sender]        = game;
+    emit gamblerEvent(msg.sender, now, (game.gameStartTime), "Create a game with wager successfully!");
+    return true;
 } 
 
-function transferToContract(uint amount) public noReentrancy payable returns(bool) {
+function transferToContract(uint amount) public noReentrancy balanceSufficient(msg.sender, amount) payable returns(bool) {
     emit gamblerEvent(msg.sender, now, amount, "transfer digital money to contract");
     emit gamblerEvent(contractAccount, now, amount, "transfer digital money to contract");
     emit gamblerEvent(contractAccount, now, address(this).balance, "transfer digital money to contract");
     emit gamblerEvent(contractAccount, now, msg.sender.balance, "transfer digital money to contract");
-    contractAccount.transfer(amount);
+
+    gamerBalance[msg.sender]     -=amount;
+    gamerBalance[contractAccount]+=amount;
     return true;
 }
 
@@ -198,7 +199,7 @@ function  joinGame(address gameCreator) public payable gameIsNotStarted(gameCrea
     }
 
     //用户余额足够可以加入游戏，加入的时候，应该扣除该用户要求的赌金，否则游戏未结束前，用户可以转走自己账户上的钱，游戏结束后将无法奖励获胜者
-    if(msg.sender.balance >= gameGrpDB[gameCreator].allowedWagerForThisGame) { 
+    if(gamerBalance[msg.sender] >= gameGrpDB[gameCreator].allowedWagerForThisGame) { 
         gameGrpDB[gameCreator].gamers.push(msg.sender);
         gameGrpDB[gameCreator]._gameInfo[msg.sender].state = gameState.INITIATED;
         gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue = 255;//indicates this gamer has not bet yet
@@ -224,8 +225,8 @@ function addGamer()  public noReentrancy gameIsNotStarted(msg.sender) returns(bo
          return false;
     }
 
-    if(creator.balance >= 100*gameGrpDB[msg.sender].allowedWagerForThisGame && gameGrpDB[msg.sender].allowedWagerForThisGame <=  200000) { //Game creator can  add contract as a partner only when contract has enough balance and the associated game wager is less than 200000
-          if(isAddrJoinGame(creator, msg.sender)) {
+    if(gamerBalance[contractAccount] >= 100*gameGrpDB[msg.sender].allowedWagerForThisGame && gameGrpDB[msg.sender].allowedWagerForThisGame <=  200000) { //Game creator can  add contract as a partner only when contract has enough balance and the associated game wager is less than 200000
+          if(isAddrJoinGame(contractAccount, msg.sender)) {
               emit gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"contract already joined in!");
               return false;
           }  else {
