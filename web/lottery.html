@@ -1,0 +1,367 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Lottery Game</title>
+	<link rel="stylesheet" type="text/css" href="css/boson.css" />
+	<style type="text/css">
+	
+	#paragraphOne{
+		font-size: 20px;
+		margin-bottom: 2px;
+		float: left;
+	} 
+
+	#parentDiv{
+		font-size:  20px;
+		height: 580px;
+		margin: 10px;
+		top: 0%;
+		border-radius: 5px;
+		border: 1px solid #ccc;
+		/*display: inline;*/
+		position: fixed;
+		right: 2px;
+	}
+
+	ol{
+		width: 380px;
+	}
+	select{
+		width: 350px;
+	}
+
+    
+	</style>
+	
+<script type="text/javascript">
+	var winWidth  = 0;
+	var winHeight = 0;
+	var winLastWidth  = 0;
+	var winLastHeight = 0;
+	var cube=document.getElementById('mycube');
+	var wrapper = document.querySelector(".wrapper");
+	var result=document.getElementById('result');
+	var result2=document.getElementById('result2');
+	var result3=document.getElementById('result3');
+	var result4=document.getElementById('result4');
+	var degArr=['','rotateY(-180deg)','rotateY(90deg)','rotateY(-90deg)','rotateX(90deg)','rotateX(-90deg)'];
+    var sidesArr=document.querySelectorAll('.side');  //得到的是NodeList
+	var isOpen=false;
+	var isMake=true;
+	var isHide=false;
+	var perspectiveOriginX=50;
+	var perspectiveOriginY=50;
+
+	function resizeWin(){
+		//获取窗口宽度
+        if (window.innerWidth) {
+            winWidth = window.innerWidth;
+        }
+        else if ((document.body) && (document.body.clientWidth)) {
+            winWidth = document.body.clientWidth;
+        }
+        //获取窗口高度
+        if (window.innerHeight) {
+            winHeight = window.innerHeight;
+        }
+        else if ((document.body) && (document.body.clientHeight)) {
+            winHeight = document.body.clientHeight;
+        }
+        //通过深入Document内部对body进行检测，获取窗口大小
+        if (document.documentElement && document.documentElement.clientHeight && document.documentElement.clientWidth) {
+            winHeight=document.documentElement.clientHeight;
+            winWidth=document.documentElement.clientWidth;
+        }
+        var diffWidth  = winLastWidth - winWidth;
+        var diffHeight = winLastHeight - winHeight;
+        winLastWidth   = winWidth;
+        winLastHeight  = winHeight;
+
+        //设置div的具体宽度=窗口的宽度的%
+        if (document.getElementById("dynStartGame")) {
+        	document.getElementById("abc").value=winWidth;
+        	document.getElementById("efg").value=winHeight;
+            document.getElementById("parentDiv").style.width  = winWidth*0.29 + "px";
+            
+            var ol = document.getElementById("joiner");
+            var numGamers = ol.getElementsByTagName("li").length;
+            document.getElementById("efg").value=numGamers;
+
+            if(document.getElementById("dynStartGame").hidden == true)
+            	numGamers = 0;
+            numGamers = 1;
+            document.getElementById("parentDiv").style.height = 428 + 30*numGamers +"px";
+            document.getElementById("gameList").style.width   = winWidth*0.3*0.95+"px";
+            }
+
+        //document.getElementById("paragraphOne").style.width = winWidth+"px";
+	}
+
+	function dispStartGame(control){
+        document.getElementById("dynStartGame").hidden = control;
+	}
+
+	function winSizeAndDispStartGame() {
+		document.getElementById("abc").value=123456;
+		dispStartGame(false);
+		resizeWin();
+	}
+
+	function test(){
+		document.getElementById("ef").innerHTML="liuyujie";
+	}
+	
+	window.onresize=winSizeAndDispStartGame;
+    window.onload=winSizeAndDispStartGame;
+	move()
+	function changePerspective(bar){
+		var val=bar.value
+		cube.style.perspective=val+'px'
+		result.value=val
+		console.log(val)
+	}
+	function changeOpacity(bar){
+		sidesArr.forEach((side)=>{
+			side.style.opacity=bar.value
+		})
+		result2.value=bar.value
+	}
+	function changePerspectiveOriginX(bar){
+		perspectiveOriginX=bar.value
+		result3.value=bar.value+'%'
+		changePerspectiveOrigin()
+	}
+	function changePerspectiveOriginY(bar){
+		perspectiveOriginY=bar.value
+		result4.value=bar.value+'%'
+		changePerspectiveOrigin()
+	}
+	function changePerspectiveOrigin(){
+		wrapper.style.perspectiveOrigin=perspectiveOriginX+'% '+perspectiveOriginY+'%'
+		
+	}
+	function hideBackface(){
+		var visibility=isHide?'hidden':'visible'
+		isHide=!isHide
+		sidesArr.forEach((side)=>{
+			side.style.backfaceVisibility=visibility
+		})
+	}
+  function move(){   
+      
+    var box = document.querySelector(".cube");   
+    var xNum =document.querySelector(".xNum");   
+    var yNum =document.querySelector(".yNum");   
+    var x = 0,y = 0,z = 0;   
+    var xx = 0,yy = 0;   
+    var xArr = [],yArr = [];   
+    wrapper.onmousedown = function (e) {//鼠标按下事件   
+        wrapper.style.cursor = 'url("img/1.jpg"),auto';   
+        xArr[0] = e.clientX/2;//获取鼠标点击屏幕时的坐标   
+        yArr[0] = e.clientY/2;   
+        wrapper.onmousemove = function (e) {//鼠标移动事件————当鼠标按下且移动时触发   
+          xArr[1] = e.clientX/2;//获取鼠标移动时第一个点的坐标   
+          yArr[1] = e.clientY/2;   
+          yy += xArr[1] - xArr[0];//获得鼠标移动的距离   
+          xx += yArr[1] - yArr[0];   
+          xNum.value = xx+"°";//将所获得距离数字赋值给input显示旋转角度   
+          yNum.value = yy+"°";   
+          //将旋转角度写入transform中   
+          box.style.transform = "rotatex("+xx+"deg) rotatey("+yy+"deg) rotatez(0deg)scale3d(1,1,1)";   
+          xArr[0] = e.clientX/2;   
+          yArr[0] = e.clientY/2;   
+        }   
+    };   
+    wrapper.onmouseup = function () {//鼠标抬起事件————用于清除鼠标移动事件，   
+      wrapper.style.cursor = 'url("img/1.jpg"),auto';   
+      wrapper.onmousemove = null;   
+    }   
+  }
+  //展开、合起立方体
+  function toggleCube(){
+  	var translateZ=isOpen?'translateZ(1rem)':'translateZ(2rem)'
+  	isOpen=!isOpen
+  	sidesArr.forEach((side,i)=>{
+  		side.style.transform=degArr[i]+translateZ
+  	})
+  }
+  function makeCube(){
+  	var translateZ=isMake?'translateZ(0rem)':'translateZ(1rem)'
+  	isMake=!isMake
+  	sidesArr.forEach((side,i)=>{
+  		setTimeout(function(){
+  			if (isMake) {
+	  			side.style.transform=''
+	  		}else{
+	  			side.style.transform=translateZ
+	  		}
+  		},i*3000)
+  	})
+  }
+  function translateCube(){
+  	var translateZ=isMake?'translateZ(0rem)':'translateZ(1rem)'
+  	isMake=!isMake
+  	sidesArr.forEach((side,i)=>{
+  		setTimeout(function(){
+  			if (isMake) {
+	  			side.style.transform=''
+	  		}else{
+	  			side.style.transform=degArr[i]+' '+translateZ
+	  		}
+  		},i*3000)
+  	})
+  }
+
+  function random(){
+  	document.getElementById("mycube").style.transition="2s all ease-in-out"
+  	document.getElementById("mycube").style.transform = "rotatex("+getRandom(7000,14000)+"deg) rotatey("+getRandom(7000,14000)+"deg) rotatez("+getRandom(7000,14000)+"deg)scale3d(1,1,1)"
+  	setTimeout(()=>{
+  		document.getElementById("mycube").style.transition="none"
+  	},2000)
+  }
+  function getRandom(min,max){
+  	var num=Math.floor(Math.random()*(max-min)+min)
+  	return num-num%90+5
+  }
+</script>
+</head>
+
+<body>
+	<p> 
+        <div class="parentDiv" style="line-height: 2px;overflow: auto;width: 30%;float: right;" id="parentDiv">
+        
+		        <div id="paragraphOne" style="float: right;margin-top: 3px" align="right">
+						<span style="padding-left: 1em">
+						Game Deposit</span>
+						<input type="number" name="deposit" min="50000" minlength="15" id="abc" style="margin-bottom: 3px">
+						<button style="width: 100px" onclick="test()" >confirm</button>   
+				        <button onclick="random()" style="width: 100px;margin-bottom: 3px">掷色子</button>
+				        <br>
+				        <span style="padding-left: 1em"></span>
+						Withdraw Amount
+						<input type="number" name="withdraw" minlength="15" id="efg">
+						<button style="width: 100px;margin-bottom: 3px;margin-top: 3px">confirm</button><br> <!-- deposit/widthdraw fail/success pop up notifications -->
+						
+						</div>
+						<HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" width="100%" color=#987cb9 SIZE=3>
+		        <br>
+
+            <div id="leftPane" style="line-height: 30px;overflow: auto;" align="left">	
+            <div align="right" style="margin: 0px 3px">
+            	<span style="padding-left: 1em">Game wager</span>
+        	    <input type="number" name="wager" min="50000" minlength="15">
+            	<button style="width: 100px;">create game</button><br>
+            </div>
+            
+            <div align="right" style="margin: 0px 3px">
+            	<span style="padding-left: 1em"></span>
+                Availabe Game
+            	<select id="gameList" multiple="false" onchange="winSizeAndDispStartGame()" style="width: 300px">
+            	<option >Creator: 0x11223344556677889900AABBCCDDEEFF</option>
+            	<option selected="selected">Creator: 0x11223344556677889900AABBCCDDFFFF</option>
+            	<option >Creator: 0x11223344556677889900AABBCCFFFFFF</option>
+            	<option >Creator: 0x11223344556677889900AABBFFFFFFFF</option>
+            	<option >Creator: 0x11223344556677889900AAFFFFFFFFFF</option>
+            	<option >Creator: 0x11223344556677889900FFFFFFFFFFFF</option>
+           		</select>
+            	<button style="width: 100px;">join game</button><br>
+            </div>
+            
+            <div id="dynStartGame">
+            <div align="right" style="margin: 0px 5px">Incomming gamers for the selected game...</div>
+            <ol id="joiner" style="line-height: 18px;margin: 0px 5px;" type="1">
+            	<li>Gamer:0x11223344556677889900AABBCCDDEEFF</li>
+            	<li>Gamer:0x11223344556677889900AABBCCDDFFFF</li>
+            	<li>Gamer:0x11223344556677889900AABBCCFFFFFF</li>
+            	<li>Gamer:0x11223344556677889900AABBFFFFFFFF</li>
+            	<li>Gamer:0x11223344556677889900AAFFFFFFFFFF</li>
+            	<li>Gamer:0x11223344556677889900FFFFFFFFFFFF</li>
+            </ol>
+            
+            <div align="right" style="margin: 0px 5px">
+				<span style="padding-left: 1em"></span>Are you ready? 
+            	<button id="start" style="width: 100px;margin: 0px auto">start</button>
+            </div>
+            </div><!-- dynStartGame -->
+            </div><!-- leftPane -->
+        </div> <!--  parentDiv -->
+    
+
+    <section>
+        <div id="dice" class="wrapper w2" style="float: left; width: 68%;height: 100%">
+ 			<div class="cube" id="mycube">
+  			正面
+      		<div class="side  front">
+      			<!-- 1 -->
+      			<div class="first_face">
+					<span class="pip"></span>
+				</div>
+      		</div>
+      		<div class="side   back">
+      			<!-- 6 -->
+      			<div class="sixth_face">
+					<div class="column">
+						<span class="pip"></span>
+						<span class="pip"></span>
+						<span class="pip"></span>
+					</div>
+					<div class="column">
+						<span class="pip"></span>
+						<span class="pip"></span>
+						<span class="pip"></span>
+					</div>
+				</div>
+      		</div>
+      		<div class="side  right">
+      			<!-- 4 -->
+      			<div class="forth_face">
+					<div class="column">
+						<span class="pip"></span>
+						<span class="pip"></span>
+					</div>
+					<div class="column">
+						<span class="pip"></span>
+						<span class="pip"></span>
+					</div>
+				</div>
+      		</div>
+      		<div class="side   left">
+      			<!-- 3 -->
+      			<div class="third_face">
+					<span class="pip flex_start"></span>
+					<span class="pip"></span>
+					<span class="pip flex_end"></span>
+				</div>
+      		</div>
+      		<div class="side    top">
+      			<!-- 5 -->
+      			<div class="fifth_face">
+					<div class="column">
+						<span class="pip flex_end"></span>
+						<span class="pip flex_end"></span>
+					</div>
+					<div class="column">
+						<span class="pip center"></span>
+					</div>
+					<div class="column">
+						<span class="pip flex_start"></span>
+						<span class="pip flex_start"></span>
+					</div>
+				</div>
+      		</div>
+      		<div class="side bottom">
+      			<!-- 2 -->
+      			<div class="second_face">
+					<span class="pip flex_start"></span>
+					<span class="pip flex_end"></span>
+				</div>				
+      		</div>
+  			</div>
+		</div>
+	</section>
+   	</p>
+</body>
+</html>
+ 
