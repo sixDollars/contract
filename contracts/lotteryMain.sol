@@ -33,14 +33,14 @@ uint8   maxBetNum;    //Maximum bet number at present, used to determine the win
 bool    gameStarted; 
 mapping (address => gameInfo)  _gameInfo; 
 uint16  allowedWagerForThisGame;  // allowed wager for this game            本次游戏需要的赌金
-address[5] gamers; //list of persons who join the game. The first index increases the game creator by default. //每个游戏组可以有任意数量的参与者，参与者数量由game创建者决定
+address[] gamers; //list of persons who join the game. The first index increases the game creator by default. //每个游戏组可以有任意数量的参与者，参与者数量由game创建者决定
 } 
 
 mapping (address => gameGroup) gameGrpDB;   //Stores all the currently on-going games; Store in memory to reduce Gas
 mapping (address => uint     ) gamerBalance;//balance for each gamer, to create/join one game one should deposit enough digital currency firstly.
-address[1] games;                            //All gamers that has deposited
+address[] games;                            //All gamers that has deposited
 address private creator;
-address private contractAccount=address(0xd668bd32e3c694bab62df1e8cb5dce61771061ea);
+address private contractAccount=address(0xd87d0260ad8bfb07c5858eab37c54f42a49e39ff);
 lotteryCtrl m_lotteryCtrl;
 bool locked;
 
@@ -80,6 +80,14 @@ modifier balanceSufficient(address gamer, uint threshold) {
 modifier gameIsNotStarted(address game) {
     require(!gameGrpDB[game].gameStarted);
     _;
+}
+
+function getGamerIndex(address gamer) public view returns(uint) {
+    for(uint i = 0; i<games.length;i++) {
+       if(games[i] == gamer)
+          return i;
+    }
+    return i;
 }
 
 function setContractAccount(address addr) public onlyCreator returns(bool) {
@@ -144,7 +152,7 @@ function showCreator() public view returns (address) {
     return creator;
 }
 
-function getGamers(address gameCreator) public view returns (address[5])
+function getGamers(address gameCreator) public view returns (address[])
 {
     return gameGrpDB[gameCreator].gamers;
 }
@@ -186,7 +194,6 @@ function createGame(uint allowedWager)  public payable balanceSufficient(msg.sen
     game._gameInfo[msg.sender].betValue      = 255;///indicates this gamer has not bet yet
     game.gamers[0] = msg.sender;
     gameGrpDB[msg.sender]        = game;
-    games[0] = msg.sender;
     emit gamblerEvent(msg.sender, now, (game.gameStartTime), "Create a game with wager successfully!");
 
     return true;
@@ -221,7 +228,6 @@ function  joinGame(address gameCreator) public payable gameIsNotStarted(gameCrea
         gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue = 255;//indicates this gamer has not bet yet
         if(transferToContract(gameGrpDB[gameCreator].allowedWagerForThisGame)) {
             emit gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"join a game successfully!");
-            games[0] = msg.sender;
             return true;
         } else {
             emit gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"join a game failed!");
@@ -255,7 +261,6 @@ function addGamer()  public noReentrancy gameIsNotStarted(msg.sender) returns(bo
               gameGrpDB[msg.sender].gamers[0] = contractAccount;
               gameGrpDB[msg.sender]._gameInfo[contractAccount].state    = gameState.INITIATED;
               gameGrpDB[msg.sender]._gameInfo[contractAccount].betValue = 255;
-              games[0] = contractAccount;         
               return true;
           }          
     }
@@ -360,6 +365,10 @@ function () public  payable {//fallback function
        
     contractAccount.transfer(msg.value);
     gamerBalance[msg.sender] += msg.value;
+
+    uint gamerIdx = getGamerIndex(msg.sender);
+    emit gamblerEvent(msg.sender, now, msg.value, "Gamer deposit!");
+    games[gamerIdx] = msg.sender;
 }
 }
 
