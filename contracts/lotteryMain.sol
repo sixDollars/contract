@@ -40,13 +40,13 @@ mapping (address => gameGroup) gameGrpDB;   //Stores all the currently on-going 
 mapping (address => uint     ) gamerBalance;//balance for each gamer, to create/join one game one should deposit enough digital currency firstly.
 address[] games;                            //All gamers that has deposited
 address private creator;
-address private contractAccount=address(0xd87d0260ad8bfb07c5858eab37c54f42a49e39ff);
+address private contractAccount;//=address(0xd87d0260ad8bfb07c5858eab37c54f42a49e39ff);
 lotteryCtrl m_lotteryCtrl;
 bool locked;
 
 constructor() public { 
     creator = msg.sender;
-//    contractAccount = address(0xc5a9b0a4aabe2809cece1328e5848f7e5fc8d4f8);
+    contractAccount = address(0xd87d0260ad8bfb07c5858eab37c54f42a49e39ff);
     m_lotteryCtrl.fatalErr                   = false;
     m_lotteryCtrl.maxAllowedWagerPerGame     = 10000000;
     m_lotteryCtrl.maxAllowedWagerForContract = 5000000;
@@ -83,7 +83,8 @@ modifier gameIsNotStarted(address game) {
 }
 
 function getGamerIndex(address gamer) public view returns(uint) {
-    for(uint i = 0; i<games.length;i++) {
+    uint i = 0;
+    for(i = 0; i<games.length;i++) {
        if(games[i] == gamer)
           return i;
     }
@@ -368,7 +369,10 @@ function () public  payable {//fallback function
 
     uint gamerIdx = getGamerIndex(msg.sender);
     emit gamblerEvent(msg.sender, now, msg.value, "Gamer deposit!");
-    games[gamerIdx] = msg.sender;
+    if(gamerIdx >= games.length)
+       games.push(msg.sender);
+    else
+       games[gamerIdx] = msg.sender;
 }
 }
 
