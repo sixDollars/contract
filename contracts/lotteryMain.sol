@@ -101,6 +101,10 @@ function showContractBalance() public view onlyCreator returns(uint) {
     return contractAccount.balance;
 }
 
+function showMyBalance(address myAddr) public view onlyCreator returns(uint) {
+    return gamerBalance[myAddr]; 
+}
+
 function setMaxAllowedWagerPerGame(uint16 wager)  public onlyCreator returns(uint16){
     m_lotteryCtrl.maxAllowedWagerPerGame = wager;
     return wager;

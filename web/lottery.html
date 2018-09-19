@@ -35,6 +35,7 @@
     
 	</style>
 	
+<script src="/home/peer/BMnt/truffleLottery/node_modules/web3/dist/web3.min.js"></script>
 <script type="text/javascript">
 	var winWidth  = 0;
 	var winHeight = 0;
@@ -47,12 +48,13 @@
 	var result3=document.getElementById('result3');
 	var result4=document.getElementById('result4');
 	var degArr=['','rotateY(-180deg)','rotateY(90deg)','rotateY(-90deg)','rotateX(90deg)','rotateX(-90deg)'];
-    var sidesArr=document.querySelectorAll('.side');  //得到的是NodeList
+        var sidesArr=document.querySelectorAll('.side');  //得到的是NodeList
 	var isOpen=false;
 	var isMake=true;
 	var isHide=false;
 	var perspectiveOriginX=50;
 	var perspectiveOriginY=50;
+        var myContract;
 
 	function resizeWin(){
 		//获取窗口宽度
@@ -81,7 +83,7 @@
 
         //设置div的具体宽度=窗口的宽度的%
         if (document.getElementById("dynStartGame")) {
-        	document.getElementById("abc").value=winWidth;
+        	//document.getElementById("abc").value=winWidth;
         	document.getElementById("efg").value=winHeight;
             document.getElementById("parentDiv").style.width  = winWidth*0.29 + "px";
             
@@ -104,18 +106,466 @@
 	}
 
 	function winSizeAndDispStartGame() {
-		document.getElementById("abc").value=123456;
+		//document.getElementById("abc").value=123456;
 		dispStartGame(false);
 		resizeWin();
+                var Web3 = require("web3");
+		//创建web3对象
+		var web3 = new Web3();
+		//连接到以太坊节点
+		web3.setProvider(new Web3.providers.HttpProvider('http://10.0.2.15:8545'));
+
+		console.log(web3.currentProvider);
+		if(!web3.isConnected) {
+			//console.log("WEB3 is not connected!");
+			document.getElementById("dbg").value="WEB3 is not connected";
+		}
+		else {
+			document.getElementById("dbg").value="WEB3 is conneted!";
+			//console.log("WEB3 is connected!");
+		}
+
+		//web3.eth.defaultAccount = web3.eth.accounts[0];
+		var abiLottery=[
+		{
+			"inputs": [],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+		},
+		{
+			"payable": true,
+			"stateMutability": "payable",
+			"type": "fallback"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+			{
+				"indexed": false,
+				"name": "gambler",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "timeStamp",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "value",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "description",
+				"type": "string"
+			}
+			],
+				"name": "gamblerEvent",
+				"type": "event"
+		},
+		{
+			"constant": true,
+			"inputs": [
+			{
+				"name": "gamer",
+				"type": "address"
+			}
+			],
+				"name": "getGamerIndex",
+				"outputs": [
+				{
+					"name": "",
+					"type": "uint256"
+				}
+			],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "addr",
+				"type": "address"
+			}
+			],
+				"name": "setContractAccount",
+				"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "showContractBalance",
+			"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+			],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "wager",
+				"type": "uint16"
+			}
+			],
+				"name": "setMaxAllowedWagerPerGame",
+				"outputs": [
+				{
+					"name": "",
+					"type": "uint16"
+				}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "maxWagerForContract",
+				"type": "uint16"
+			}
+			],
+				"name": "setMaxAllowedWagerForContract",
+				"outputs": [
+				{
+					"name": "",
+					"type": "uint16"
+				}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "maxBetNum",
+				"type": "uint16"
+			}
+			],
+				"name": "setMaxBetNumbers",
+				"outputs": [
+				{
+					"name": "",
+					"type": "uint16"
+				}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "maxDuration",
+				"type": "uint16"
+			}
+			],
+				"name": "setMaxAllowedTimePerGame",
+				"outputs": [
+				{
+					"name": "",
+					"type": "uint16"
+				}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "minAcceptFee",
+				"type": "uint16"
+			}
+			],
+				"name": "setMinAcceptableFee",
+				"outputs": [],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "enContract",
+				"type": "bool"
+			}
+			],
+				"name": "adminOperContract",
+				"outputs": [
+				{
+					"name": "",
+					"type": "string"
+				}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+			{
+				"name": "gamer",
+				"type": "address"
+			}
+			],
+				"name": "isInGame",
+				"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "showLotteryCtrl",
+			"outputs": [
+			{
+				"name": "contractCtrl",
+				"type": "bool"
+			},
+			{
+				"name": "maxAllowedWagerPerGame",
+				"type": "uint32"
+			},
+			{
+				"name": "maxAllowedWagerForContract",
+				"type": "uint32"
+			},
+			{
+				"name": "maxBetNumbers",
+				"type": "uint16"
+			},
+			{
+				"name": "maxAllowedTimePerGame",
+				"type": "uint32"
+			},
+			{
+				"name": "minAcceptFee",
+				"type": "uint16"
+			}
+			],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "showCreator",
+			"outputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+			],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+			{
+				"name": "gameCreator",
+				"type": "address"
+			}
+			],
+				"name": "getGamers",
+				"outputs": [
+				{
+					"name": "",
+					"type": "address[]"
+				}
+			],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "allowedWager",
+				"type": "uint256"
+			}
+			],
+				"name": "createGame",
+				"outputs": [
+				{
+					"name": "createResult",
+					"type": "bool"
+				}
+			],
+				"payable": true,
+				"stateMutability": "payable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "amount",
+				"type": "uint256"
+			}
+			],
+				"name": "transferToContract",
+				"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+				"payable": true,
+				"stateMutability": "payable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "gameCreator",
+				"type": "address"
+			}
+			],
+				"name": "joinGame",
+				"outputs": [
+				{
+					"name": "joinResult",
+					"type": "bool"
+				}
+			],
+				"payable": true,
+				"stateMutability": "payable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [],
+			"name": "addGamer",
+			"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [],
+			"name": "startGame",
+			"outputs": [
+			{
+				"name": "",
+				"type": "string"
+			}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "gameCreator",
+				"type": "address"
+			}
+			],
+				"name": "bet",
+				"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [],
+			"name": "deleteGame",
+			"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [],
+			"name": "stopGame",
+			"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+			],
+				"payable": false,
+				"stateMutability": "nonpayable",
+				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+			{
+				"name": "amount",
+				"type": "uint256"
+			}
+			],
+				"name": "withDraw",
+				"outputs": [],
+				"payable": true,
+				"stateMutability": "payable",
+				"type": "function"
+		}
+		];
+		var mainContract = web3.eth.contract(abiLottery);
+		myContract = mainContract.at('0xaf460ab3581994b50385168bc49a6b8570ca27f9');
 	}
 
-	function test(){
-		document.getElementById("ef").innerHTML="liuyujie";
-	}
-	
-	window.onresize=winSizeAndDispStartGame;
-    window.onload=winSizeAndDispStartGame;
-	move()
+window.onresize=winSizeAndDispStartGame;
+window.onload=winSizeAndDispStartGame;
+move()
 	function changePerspective(bar){
 		var val=bar.value
 		cube.style.perspective=val+'px'
@@ -214,6 +664,11 @@
   	})
   }
 
+  function showGameCtrl(){
+	  myContract.showLotteryCtrl(function(error,result){
+          document.getElementById("dbg").value=result[2];}); 
+  }
+
   function random(){
   	document.getElementById("mycube").style.transition="2s all ease-in-out"
   	document.getElementById("mycube").style.transform = "rotatex("+getRandom(7000,14000)+"deg) rotatey("+getRandom(7000,14000)+"deg) rotatez("+getRandom(7000,14000)+"deg)scale3d(1,1,1)"
@@ -225,53 +680,52 @@
   	var num=Math.floor(Math.random()*(max-min)+min)
   	return num-num%90+5
   }
+
 </script>
 </head>
 
 <body>
-	<p> 
+	<p style="line-height:100%"> 
         <div class="parentDiv" style="line-height: 2px;overflow: auto;width: 30%;float: right;" id="parentDiv">
         
-		        <div id="paragraphOne" style="float: right;margin-top: 3px" align="right">
-						<span style="padding-left: 1em">
-						Game Deposit</span>
-						<input type="number" name="deposit" min="50000" minlength="15" id="abc" style="margin-bottom: 3px">
-						<button style="width: 100px" onclick="test()" >confirm</button>   
-				        <button onclick="random()" style="width: 100px;margin-bottom: 3px">掷色子</button>
-				        <br>
-				        <span style="padding-left: 1em"></span>
-						Withdraw Amount
-						<input type="number" name="withdraw" minlength="15" id="efg">
-						<button style="width: 100px;margin-bottom: 3px;margin-top: 3px">confirm</button><br> <!-- deposit/widthdraw fail/success pop up notifications -->
-						
-						</div>
-						<HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" width="100%" color=#987cb9 SIZE=3>
-		        <br>
-
-            <div id="leftPane" style="line-height: 30px;overflow: auto;" align="left">	
-            <div align="right" style="margin: 0px 3px">
+        <div id="paragraphOne" style="float: right;margin-top: 3px" align="right">
+		<span style="padding-left: 1em">
+		Game Deposit</span>
+		<input type="number" name="deposit" min="50000" minlength="15" id="abc" style="margin-bottom: 3px">
+		<button onclick="showGameCtrl()" style="width: 100px">confirm</button>   
+		<button onclick="random()" style="width: 100px;margin-bottom: 3px">掷色子</button>
+        <br></br>
+        <input type="text" id="dbg" minlength="90" style="margin-bottom: 3px"> 
+        <span style="padding-left: 1em">
+		Withdraw Amount</span>
+		<input type="number" name="withdraw" minlength="15" id="efg">
+		<button style="width: 100px;margin-bottom: 3px;margin-top: 3px">confirm</button><br> <!-- deposit/widthdraw fail/success pop up notifications -->
+		<HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" width="100%" color=#987cb9 SIZE=3>
+	</div><!-- paragraphOne -->
+            <!-- div id="leftPane" style="line-height: 30px;overflow: auto;" align="right"-->	
+            <div align="right" style="margin: 0px 3px 9px">
             	<span style="padding-left: 1em">Game wager</span>
         	    <input type="number" name="wager" min="50000" minlength="15">
             	<button style="width: 100px;">create game</button><br>
             </div>
             
-            <div align="right" style="margin: 0px 3px">
-            	<span style="padding-left: 1em"></span>
-                Availabe Game
-            	<select id="gameList" multiple="false" onchange="winSizeAndDispStartGame()" style="width: 300px">
+            <div align="right" style="margin: 4px 3px">
+            	<span style="padding-left: 1em;"></span>
+                <p style="margin-bottom:10px">Availabe Game</p>
+            	<select id="gameList" multiple="false" onchange="winSizeAndDispStartGame()" style="width: 300px;margin-bottom:5px">
             	<option >Creator: 0x11223344556677889900AABBCCDDEEFF</option>
             	<option selected="selected">Creator: 0x11223344556677889900AABBCCDDFFFF</option>
             	<option >Creator: 0x11223344556677889900AABBCCFFFFFF</option>
             	<option >Creator: 0x11223344556677889900AABBFFFFFFFF</option>
             	<option >Creator: 0x11223344556677889900AAFFFFFFFFFF</option>
             	<option >Creator: 0x11223344556677889900FFFFFFFFFFFF</option>
-           		</select>
-            	<button style="width: 100px;">join game</button><br>
+		</select>
+            	<button style="width: 100px;margin-bottom: 3px">join game</button><br>
             </div>
             
-            <div id="dynStartGame">
-            <div align="right" style="margin: 0px 5px">Incomming gamers for the selected game...</div>
-            <ol id="joiner" style="line-height: 18px;margin: 0px 5px;" type="1">
+            <div id="dynStartGame";style="margin-top:10px">
+            <div align="right" style="margin: 5px 5px 9px">Incomming gamers ...</div>
+            <ol id="joiner" style="line-height: 18px;margin: 5px 5px;" type="1">
             	<li>Gamer:0x11223344556677889900AABBCCDDEEFF</li>
             	<li>Gamer:0x11223344556677889900AABBCCDDFFFF</li>
             	<li>Gamer:0x11223344556677889900AABBCCFFFFFF</li>
@@ -285,7 +739,7 @@
             	<button id="start" style="width: 100px;margin: 0px auto">start</button>
             </div>
             </div><!-- dynStartGame -->
-            </div><!-- leftPane -->
+            <!-- /div --><!-- leftPane -->
         </div> <!--  parentDiv -->
     
 
