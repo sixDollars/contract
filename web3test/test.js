@@ -73,6 +73,25 @@ var abiLottery=[
       "type": "function"
     },
     {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "creator1",
+          "type": "address"
+        }
+      ],
+      "name": "getRandom",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "constant": false,
       "inputs": [
         {
@@ -95,6 +114,25 @@ var abiLottery=[
       "constant": true,
       "inputs": [],
       "name": "showContractBalance",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "myAddr",
+          "type": "address"
+        }
+      ],
+      "name": "showMyBalance",
       "outputs": [
         {
           "name": "",
@@ -320,6 +358,20 @@ var abiLottery=[
       "type": "function"
     },
     {
+      "constant": true,
+      "inputs": [],
+      "name": "getGameList",
+      "outputs": [
+        {
+          "name": "gameList",
+          "type": "address[]"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "constant": false,
       "inputs": [
         {
@@ -445,6 +497,20 @@ var abiLottery=[
       "payable": true,
       "stateMutability": "payable",
       "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "deposit",
+      "outputs": [
+        {
+          "name": "result",
+          "type": "bool"
+        }
+      ],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "function"
     }
   ];
 var binLotteryRandom ="0x6080604052348015600f57600080fd5b50603580601d6000396000f3006080604052600080fd00a165627a7a7230582011a5cf758345776702ce17fb4fa41d8cae074eec877cd466314bd6ecc94fc8250029";
@@ -488,7 +554,8 @@ var name2= mainContract.new(
     }
  })
 */
-var info = mainContract.at('0xaf460ab3581994b50385168bc49a6b8570ca27f9');
+var info = mainContract.at('0x38d4526858b63ef0962cd44515406db3dcad685b');
+//info.deposit.sendTransaction({from:'0x228fb99b74afaf0e9432bcd457b771c8b296cb22',value:100000});
 var gamblerEv = info.gamblerEvent();
 gamblerEv.watch(function(error, result) {
     if (!error) {

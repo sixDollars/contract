@@ -23,6 +23,7 @@ END
 }
 
 struct gameInfo {
+    address gamer;
     gameState state;//INITIATED  RUN END
     uint8 betValue;
 }
@@ -31,9 +32,9 @@ struct gameGroup {
 uint    gameStartTime;//游戏组开始游戏时间，超过最长游戏时间后，游戏强制结束并按上面的规则计算胜负，分配奖金
 uint8   maxBetNum;    //Maximum bet number at present, used to determine the winner
 bool    gameStarted; 
-mapping (address => gameInfo)  _gameInfo; 
+gameInfo[3]  _gameInfo; 
 uint16  allowedWagerForThisGame;  // allowed wager for this game            本次游戏需要的赌金
-address[] gamers; //list of persons who join the game. The first index increases the game creator by default. //每个游戏组可以有任意数量的参与者，参与者数量由game创建者决定
+address[] gamers; //list of persons who join the game. The first index indicates the game creator by default. //每个游戏组可以有任意数量的参与者，参与者数量由game创建者决定
 } 
 
 mapping (address => gameGroup) gameGrpDB;   //Stores all the currently on-going games; Store in memory to reduce Gas
@@ -89,6 +90,15 @@ function getGamerIndex(address gamer) public view returns(uint) {
           return i;
     }
     return i;
+}
+
+function getRandom(address creator1) public view returns(uint) {
+    for(uint i=0; i<3;i++){
+      if(gameGrpDB[creator1]._gameInfo[i].gamer == msg.sender){
+           return gameGrpDB[creator1]._gameInfo[i].betValue;
+      }}
+
+    return 0;
 }
 
 function setContractAccount(address addr) public onlyCreator returns(bool) {
@@ -190,25 +200,37 @@ function createGame(uint allowedWager)  public payable balanceSufficient(msg.sen
        emit gamblerEvent(msg.sender, now, allowedWager, "transfer wager from game creator to contract failed!");
        return false;
     }
+
     gameGroup storage game;
     emit gamblerEvent(msg.sender, now, allowedWager, "define gameGroup storage game!");
     game.allowedWagerForThisGame = uint16(allowedWager);
-    game.gameStartTime           = now;
-    game.maxBetNum               = 0;
-    game._gameInfo[msg.sender].state         = gameState.INITIATED;
-    game._gameInfo[msg.sender].betValue      = 255;///indicates this gamer has not bet yet
-    game.gamers[0] = msg.sender;
+    game._gameInfo[0].state         = gameState.INITIATED;
+    game._gameInfo[0].betValue      = 255;///indicates this gamer has not bet yet
+    game._gameInfo[0].gamer         = msg.sender;///indicates this gamer has not bet yet
+    game.gamers.push(msg.sender);
     gameGrpDB[msg.sender]        = game;
-    emit gamblerEvent(msg.sender, now, (game.gameStartTime), "Create a game with wager successfully!");
+    emit gamblerEvent(msg.sender, now, game.gameStartTime, "Create a game with wager successfully!");
 
     return true;
 } 
+
+function getGameList() public view returns(address[] gameList){
+   uint tmp = 0;
+   emit gamblerEvent(msg.sender, now, games.length, "Create a game with wager successfully!");
+   for(uint idx = 0; idx < games.length; idx++)
+   {
+      emit gamblerEvent(msg.sender, now, gameGrpDB[games[idx]].gameStartTime, "Create a game with wager successfully!");
+      if(gameGrpDB[games[idx]].gameStartTime == 0) {
+        gameList[tmp]=games[idx];
+        tmp += 1;
+      }
+   }
+}
 
 function transferToContract(uint amount) public noReentrancy balanceSufficient(msg.sender, amount) payable returns(bool) {
     emit gamblerEvent(msg.sender, now, amount, "transfer digital money to contract");
 
     gamerBalance[msg.sender]     -=amount;
-    gamerBalance[contractAccount]+=amount;
     return true;
 }
 
@@ -228,9 +250,10 @@ function  joinGame(address gameCreator) public payable gameIsNotStarted(gameCrea
 
     //用户余额足够可以加入游戏，加入的时候，应该扣除该用户要求的赌金，否则游戏未结束前，用户可以转走自己账户上的钱，游戏结束后将无法奖励获胜者
     if(gamerBalance[msg.sender] >= gameGrpDB[gameCreator].allowedWagerForThisGame) { 
-        gameGrpDB[gameCreator].gamers[0] = msg.sender;
-        gameGrpDB[gameCreator]._gameInfo[msg.sender].state = gameState.INITIATED;
-        gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue = 255;//indicates this gamer has not bet yet
+        gameGrpDB[gameCreator].gamers.push(msg.sender);
+        gameGrpDB[gameCreator]._gameInfo[1].state = gameState.INITIATED;
+        gameGrpDB[gameCreator]._gameInfo[1].betValue = 255;//indicates this gamer has not bet yet
+        gameGrpDB[gameCreator]._gameInfo[1].gamer = msg.sender;
         if(transferToContract(gameGrpDB[gameCreator].allowedWagerForThisGame)) {
             emit gamblerEvent(msg.sender, now, gameGrpDB[gameCreator].allowedWagerForThisGame,"join a game successfully!");
             return true;
@@ -263,9 +286,10 @@ function addGamer()  public noReentrancy gameIsNotStarted(msg.sender) returns(bo
               return false;
           }  else {
               emit gamblerEvent(msg.sender, now, gameGrpDB[msg.sender].allowedWagerForThisGame,"add contract to the game!");
-              gameGrpDB[msg.sender].gamers[0] = contractAccount;
-              gameGrpDB[msg.sender]._gameInfo[contractAccount].state    = gameState.INITIATED;
-              gameGrpDB[msg.sender]._gameInfo[contractAccount].betValue = 255;
+              gameGrpDB[msg.sender].gamers.push(contractAccount);
+              gameGrpDB[msg.sender]._gameInfo[2].state    = gameState.INITIATED;
+              gameGrpDB[msg.sender]._gameInfo[2].betValue = 255;
+              gameGrpDB[msg.sender]._gameInfo[2].gamer    = contractAccount;
               return true;
           }          
     }
@@ -301,11 +325,13 @@ function bet(address gameCreator) public returns(bool) {
 
      uint betValue = getLotteryRand();
      emit gamblerEvent(msg.sender, now, betValue,"gamer shot a number!");
-     gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue = uint8(betValue);
-     gameGrpDB[gameCreator].maxBetNum =  gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue >  gameGrpDB[gameCreator].maxBetNum ? gameGrpDB[gameCreator]._gameInfo[msg.sender].betValue:gameGrpDB[gameCreator].maxBetNum;
+     for(uint i=0;i<3;i++){
+        if(gameGrpDB[gameCreator]._gameInfo[i].gamer == msg.sender){
+            gameGrpDB[gameCreator]._gameInfo[i].betValue = uint8(betValue);
+	    gameGrpDB[gameCreator].maxBetNum =  gameGrpDB[gameCreator]._gameInfo[i].betValue >  gameGrpDB[gameCreator].maxBetNum ? gameGrpDB[gameCreator]._gameInfo[i].betValue:gameGrpDB[gameCreator].maxBetNum;
+	    return determineWinner(gameCreator,false);
+        }}
            
-     return determineWinner(gameCreator,false);
-
     return true;
 }
 
@@ -315,16 +341,16 @@ function determineWinner(address gameCreator, bool endGame) private returns(bool
      uint  totalWinner = 0;
      if(gamend == false) {
          gamend = true;
-         for(uint32 i = 0; i < gameGrpDB[gameCreator].gamers.length; i++) {
+         for(uint32 i = 0; i<gameGrpDB[gameCreator].gamers.length && i < 3; i++) {
              totalWager += gameGrpDB[gameCreator].allowedWagerForThisGame;
-             if(gameGrpDB[gameCreator]._gameInfo[gameGrpDB[gameCreator].gamers[i]].betValue == 255) {
+             if(gameGrpDB[gameCreator]._gameInfo[i].betValue == 255) {
                  if(endGame == false) {
                      gamend = false;
                      emit gamblerEvent(gameCreator, now, 0x0,"game has not completed yet!");
                  }
              }
 
-             if(gameGrpDB[gameCreator]._gameInfo[gameGrpDB[gameCreator].gamers[i]].betValue == gameGrpDB[gameCreator].maxBetNum) {
+             if(gameGrpDB[gameCreator]._gameInfo[i].betValue == gameGrpDB[gameCreator].maxBetNum) {
                  totalWinner += 1;
              }
          }
@@ -333,8 +359,8 @@ function determineWinner(address gameCreator, bool endGame) private returns(bool
      if(gamend == true) {
          uint award = totalWager -  m_lotteryCtrl.minAcceptFee *  totalWager / gameGrpDB[gameCreator].allowedWagerForThisGame;
          award = award / totalWinner;
-         for(uint32 j = 0; j < gameGrpDB[gameCreator].gamers.length; j++) {
-             if(gameGrpDB[gameCreator]._gameInfo[gameGrpDB[gameCreator].gamers[j]].betValue == gameGrpDB[gameCreator].maxBetNum) {
+         for(uint32 j = 0; j < gameGrpDB[gameCreator].gamers.length && j<3; j++) {
+             if(gameGrpDB[gameCreator]._gameInfo[j].betValue == gameGrpDB[gameCreator].maxBetNum) {
              //give award to winners
                  gamerBalance[gameGrpDB[gameCreator].gamers[j]] += award;    
              } else {
@@ -371,6 +397,21 @@ function () public  payable {//fallback function
     contractAccount.transfer(msg.value);
     gamerBalance[msg.sender] += msg.value;
 
+    uint gamerIdx = getGamerIndex(msg.sender);
+    emit gamblerEvent(msg.sender, now, msg.value, "Gamer deposit!");
+    if(gamerIdx >= games.length)
+       games.push(msg.sender);
+    else
+       games[gamerIdx] = msg.sender;
+}
+function deposit() public payable returns(bool result){
+    if(msg.value <= 0) {
+       emit gamblerEvent(msg.sender,now,msg.value,"Please deposit a positiv amount!");
+       return false;
+    }
+
+    contractAccount.transfer(msg.value);
+    gamerBalance[msg.sender] += msg.value;
     uint gamerIdx = getGamerIndex(msg.sender);
     emit gamblerEvent(msg.sender, now, msg.value, "Gamer deposit!");
     if(gamerIdx >= games.length)

@@ -55,6 +55,11 @@
 	var perspectiveOriginX=50;
 	var perspectiveOriginY=50;
         var myContract;
+        var contractAddr='0x9ba678a2e1c3ede8ab449f2abf6b63f6ec0b8b34';
+        var gamer;
+        var gameCreator;
+        var web3;
+        var coinbase;
 
 	function resizeWin(){
 		//获取窗口宽度
@@ -97,7 +102,6 @@
             document.getElementById("parentDiv").style.height = 428 + 30*numGamers +"px";
             document.getElementById("gameList").style.width   = winWidth*0.3*0.95+"px";
             }
-
         //document.getElementById("paragraphOne").style.width = winWidth+"px";
 	}
 
@@ -106,26 +110,22 @@
 	}
 
 	function winSizeAndDispStartGame() {
-		//document.getElementById("abc").value=123456;
 		dispStartGame(false);
 		resizeWin();
                 var Web3 = require("web3");
 		//创建web3对象
-		var web3 = new Web3();
+		web3 = new Web3();
 		//连接到以太坊节点
 		web3.setProvider(new Web3.providers.HttpProvider('http://10.0.2.15:8545'));
 
 		console.log(web3.currentProvider);
 		if(!web3.isConnected) {
-			//console.log("WEB3 is not connected!");
 			document.getElementById("dbg").value="WEB3 is not connected";
 		}
 		else {
 			document.getElementById("dbg").value="WEB3 is conneted!";
-			//console.log("WEB3 is connected!");
 		}
 
-		//web3.eth.defaultAccount = web3.eth.accounts[0];
 		var abiLottery=[
 		{
 			"inputs": [],
@@ -212,6 +212,25 @@
 				"name": "",
 				"type": "uint256"
 			}
+			],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+			{
+				"name": "myAddr",
+				"type": "address"
+			}
+			],
+				"name": "showMyBalance",
+				"outputs": [
+				{
+					"name": "",
+					"type": "uint256"
+				}
 			],
 				"payable": false,
 				"stateMutability": "view",
@@ -432,6 +451,20 @@
 				"type": "function"
 		},
 		{
+			"constant": true,
+			"inputs": [],
+			"name": "getGameList",
+			"outputs": [
+			{
+				"name": "gameList",
+				"type": "address[]"
+			}
+			],
+				"payable": false,
+				"stateMutability": "view",
+				"type": "function"
+		},
+		{
 			"constant": false,
 			"inputs": [
 			{
@@ -557,10 +590,26 @@
 				"payable": true,
 				"stateMutability": "payable",
 				"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [],
+			"name": "deposit",
+			"outputs": [
+			{
+				"name": "result",
+				"type": "bool"
+			}
+			],
+				"payable": true,
+				"stateMutability": "payable",
+				"type": "function"
 		}
 		];
 		var mainContract = web3.eth.contract(abiLottery);
-		myContract = mainContract.at('0xaf460ab3581994b50385168bc49a6b8570ca27f9');
+		myContract = mainContract.at('0x9ba678a2e1c3ede8ab449f2abf6b63f6ec0b8b34');
+		dispGameList();
+                dispGamerListInAGame();
 	}
 
 window.onresize=winSizeAndDispStartGame;
@@ -568,254 +617,446 @@ window.onload=winSizeAndDispStartGame;
 move()
 	function changePerspective(bar){
 		var val=bar.value
-		cube.style.perspective=val+'px'
-		result.value=val
-		console.log(val)
+			cube.style.perspective=val+'px'
+			result.value=val
+			console.log(val)
 	}
-	function changeOpacity(bar){
-		sidesArr.forEach((side)=>{
+function changeOpacity(bar){
+	sidesArr.forEach((side)=>{
 			side.style.opacity=bar.value
-		})
-		result2.value=bar.value
-	}
-	function changePerspectiveOriginX(bar){
-		perspectiveOriginX=bar.value
+			})
+	result2.value=bar.value
+}
+function changePerspectiveOriginX(bar){
+	perspectiveOriginX=bar.value
 		result3.value=bar.value+'%'
 		changePerspectiveOrigin()
-	}
-	function changePerspectiveOriginY(bar){
-		perspectiveOriginY=bar.value
+}
+function changePerspectiveOriginY(bar){
+	perspectiveOriginY=bar.value
 		result4.value=bar.value+'%'
 		changePerspectiveOrigin()
-	}
-	function changePerspectiveOrigin(){
-		wrapper.style.perspectiveOrigin=perspectiveOriginX+'% '+perspectiveOriginY+'%'
-		
-	}
-	function hideBackface(){
-		var visibility=isHide?'hidden':'visible'
+}
+function changePerspectiveOrigin(){
+	wrapper.style.perspectiveOrigin=perspectiveOriginX+'% '+perspectiveOriginY+'%'
+
+}
+function hideBackface(){
+	var visibility=isHide?'hidden':'visible'
 		isHide=!isHide
 		sidesArr.forEach((side)=>{
-			side.style.backfaceVisibility=visibility
-		})
-	}
-  function move(){   
-      
-    var box = document.querySelector(".cube");   
-    var xNum =document.querySelector(".xNum");   
-    var yNum =document.querySelector(".yNum");   
-    var x = 0,y = 0,z = 0;   
-    var xx = 0,yy = 0;   
-    var xArr = [],yArr = [];   
-    wrapper.onmousedown = function (e) {//鼠标按下事件   
-        wrapper.style.cursor = 'url("img/1.jpg"),auto';   
-        xArr[0] = e.clientX/2;//获取鼠标点击屏幕时的坐标   
-        yArr[0] = e.clientY/2;   
-        wrapper.onmousemove = function (e) {//鼠标移动事件————当鼠标按下且移动时触发   
-          xArr[1] = e.clientX/2;//获取鼠标移动时第一个点的坐标   
-          yArr[1] = e.clientY/2;   
-          yy += xArr[1] - xArr[0];//获得鼠标移动的距离   
-          xx += yArr[1] - yArr[0];   
-          xNum.value = xx+"°";//将所获得距离数字赋值给input显示旋转角度   
-          yNum.value = yy+"°";   
-          //将旋转角度写入transform中   
-          box.style.transform = "rotatex("+xx+"deg) rotatey("+yy+"deg) rotatez(0deg)scale3d(1,1,1)";   
-          xArr[0] = e.clientX/2;   
-          yArr[0] = e.clientY/2;   
-        }   
-    };   
-    wrapper.onmouseup = function () {//鼠标抬起事件————用于清除鼠标移动事件，   
-      wrapper.style.cursor = 'url("img/1.jpg"),auto';   
-      wrapper.onmousemove = null;   
-    }   
-  }
-  //展开、合起立方体
-  function toggleCube(){
-  	var translateZ=isOpen?'translateZ(1rem)':'translateZ(2rem)'
-  	isOpen=!isOpen
-  	sidesArr.forEach((side,i)=>{
-  		side.style.transform=degArr[i]+translateZ
-  	})
-  }
-  function makeCube(){
-  	var translateZ=isMake?'translateZ(0rem)':'translateZ(1rem)'
-  	isMake=!isMake
-  	sidesArr.forEach((side,i)=>{
-  		setTimeout(function(){
-  			if (isMake) {
-	  			side.style.transform=''
-	  		}else{
-	  			side.style.transform=translateZ
-	  		}
-  		},i*3000)
-  	})
-  }
-  function translateCube(){
-  	var translateZ=isMake?'translateZ(0rem)':'translateZ(1rem)'
-  	isMake=!isMake
-  	sidesArr.forEach((side,i)=>{
-  		setTimeout(function(){
-  			if (isMake) {
-	  			side.style.transform=''
-	  		}else{
-	  			side.style.transform=degArr[i]+' '+translateZ
-	  		}
-  		},i*3000)
-  	})
-  }
+				side.style.backfaceVisibility=visibility
+				})
+}
+function move(){   
 
-  function showGameCtrl(){
-	  myContract.showLotteryCtrl(function(error,result){
-          document.getElementById("dbg").value=result[2];}); 
-  }
+	var box = document.querySelector(".cube");   
+	var xNum =document.querySelector(".xNum");   
+	var yNum =document.querySelector(".yNum");   
+	var x = 0,y = 0,z = 0;   
+	var xx = 0,yy = 0;   
+	var xArr = [],yArr = [];   
+	wrapper.onmousedown = function (e) {//鼠标按下事件   
+		wrapper.style.cursor = 'url("img/1.jpg"),auto';   
+		xArr[0] = e.clientX/2;//获取鼠标点击屏幕时的坐标   
+		yArr[0] = e.clientY/2;   
+		wrapper.onmousemove = function (e) {//鼠标移动事件————当鼠标按下且移动时触发   
+			xArr[1] = e.clientX/2;//获取鼠标移动时第一个点的坐标   
+			yArr[1] = e.clientY/2;   
+			yy += xArr[1] - xArr[0];//获得鼠标移动的距离   
+			xx += yArr[1] - yArr[0];   
+			xNum.value = xx+"°";//将所获得距离数字赋值给input显示旋转角度   
+			yNum.value = yy+"°";   
+			//将旋转角度写入transform中   
+			box.style.transform = "rotatex("+xx+"deg) rotatey("+yy+"deg) rotatez(0deg)scale3d(1,1,1)";   
+			xArr[0] = e.clientX/2;   
+			yArr[0] = e.clientY/2;   
+		}   
+	};   
+	wrapper.onmouseup = function () {//鼠标抬起事件————用于清除鼠标移动事件，   
+		wrapper.style.cursor = 'url("img/1.jpg"),auto';   
+		wrapper.onmousemove = null;   
+	}   
+}
+//展开、合起立方体
+function toggleCube(){
+	var translateZ=isOpen?'translateZ(1rem)':'translateZ(2rem)'
+		isOpen=!isOpen
+		sidesArr.forEach((side,i)=>{
+				side.style.transform=degArr[i]+translateZ
+				})
+}
+function makeCube(){
+	var translateZ=isMake?'translateZ(0rem)':'translateZ(1rem)'
+		isMake=!isMake
+		sidesArr.forEach((side,i)=>{
+				setTimeout(function(){
+					if (isMake) {
+					side.style.transform=''
+					}else{
+					side.style.transform=translateZ
+					}
+					},i*3000)
+				})
+}
+function translateCube(){
+	var translateZ=isMake?'translateZ(0rem)':'translateZ(1rem)'
+		isMake=!isMake
+		sidesArr.forEach((side,i)=>{
+				setTimeout(function(){
+					if (isMake) {
+					side.style.transform=''
+					}else{
+					side.style.transform=degArr[i]+' '+translateZ
+					}
+					},i*3000)
+				})
+}
 
-  function random(){
-  	document.getElementById("mycube").style.transition="2s all ease-in-out"
-  	document.getElementById("mycube").style.transform = "rotatex("+getRandom(7000,14000)+"deg) rotatey("+getRandom(7000,14000)+"deg) rotatez("+getRandom(7000,14000)+"deg)scale3d(1,1,1)"
-  	setTimeout(()=>{
-  		document.getElementById("mycube").style.transition="none"
-  	},2000)
-  }
-  function getRandom(min,max){
-  	var num=Math.floor(Math.random()*(max-min)+min)
-  	return num-num%90+5
-  }
+function showGameCtrl(){
+	myContract.showLotteryCtrl(function(error,result){
+			document.getElementById("dbg").value=result[2];}); 
+	myContract.showMyBalance('0x228fb99b74afaf0e9432bcd457b771c8b296cb22',function(error,result){
+			document.getElementById("dbg").value=result[0];});
+}
 
-</script>
-</head>
+function dispGameList(){
+        var area= document.getElementById("gameList");
+	area.innerHTML = "";
+        var list=myContract.getGameList.call();
+        alert("000000 list = "+list);
+        myContract.getGameList(function(err,list){
+                   if(err != null) {
+                       alert("get game list failed! err : "+err);
+                   }else{
+                       alert("get game list ok! result : " + list);
+                       var gl = document.getElementById("gameList");
+                       for(game in list)
+                       {
+                           var option=document.createElement("option");
+		           option.text=""+game;
+                           try{
+		           // 对于更早的版本IE8
+		               gl.add(option,gl.options[null]);
+		           }catch (e){
+		               gl.add(option,null);
+		           }
+                       }
+                   }});
+}
 
-<body>
-	<p style="line-height:100%"> 
-        <div class="parentDiv" style="line-height: 2px;overflow: auto;width: 30%;float: right;" id="parentDiv">
+function dispGamerListInAGame() {
+    var ol = document.getElementById("joiner");
+    ol.innerHTML = "";
+
+    var sel_obj = document.getElementById("gameList");
+    var index   = sel_obj.selectedIndex;
+    if(sel_obj.options[index] == undefined) return;
+    var creator = sel_obj.options[index].text;//get game creator here
+    
+    var list= myContract.getGamers(creator);
+    alert(list);
+/*
+    myContract.getGamers(creator,function(err,list){
+        if(err != null) {
+        alert("get joiners in game " + creator + " failed! err="+err);
+    }else{
+        alert("get joiners in game " + creator + "successfully! Joiners="+list);
+        for(joiner in list)
+        {
+            var item=document.createElement("li");
+            item.innerHTML=joiner;
+            ol.appendChild(item);
+        }
+    }});
+*/
+}
+
+function deposit(){
+	var amount=document.getElementById("abc").value;
         
-        <div id="paragraphOne" style="float: right;margin-top: 3px" align="right">
+        //var contractAddr='0x9ba678a2e1c3ede8ab449f2abf6b63f6ec0b8b34';
+        var defaultAddr;
+        web3.eth.getAccounts(function(e,a){
+            if(e != null) {
+               document.getElementById("dbg").value="Get accounts array fail!";
+            } else {
+               console.log(a);
+               defaultAddr = a[0];
+	       web3.eth.sendTransaction({from:defaultAddr,to:contractAddr,gas:50000,value:amount},function(e,h){
+		       if(e != null) {
+		       document.getElementById("dbg").value=("send transaction to contract failed " + e);
+		       } else {
+		       document.getElementById("dbg").value=("send transaction to contract successfully!");
+		       }});
+            }}); 
+
+/*
+        web3.eth.getCoinbase(function(e,i){
+           if(e != null) {
+               document.getElementById("dbg").value="Get coinbase failed!";
+           }
+           else {
+               var gamer = i;
+               console.log(i);
+               myContract.deposit().send({from:"0x"+web3.eth.accounts[0],to:"0x"+web3.eth.accounts[1],value:amount},function(error,hash){
+               console.log(i);
+                    if(error!=0) document.getElementById("dbg").value="Deposit failed: " +error;
+                    else {
+                    document.getElementById("dbg").value="deposit successfully!";
+                    }
+           });}});
+*/
+}
+
+function withdraw() {
+	var amount=document.getElementById("efg").value;
+
+        web3.eth.getAccounts(function(e,a){
+            if(e != null) {
+               document.getElementById("dbg").value="Get my accounts failed! err: "+e;
+            }else{
+               document.getElementById("dbg").value="Get my accounts ok:"+a;
+               console.log(a[0]);
+	       myContract.withDraw.sendTransaction(amount,{from:a[0],value:amount},function(err,hash){
+		       if(err !=null ) document.getElementById("dbg").value="Widthdraw failed! err:"+err;
+		       else {
+                       console.log(hash); 
+                       document.getElementById("dbg").value="Widthdraw successfully!";}});
+	       }});
+}
+
+function createGame() {
+        var amount = document.getElementById("wager").value;
+        web3.eth.getAccounts(function(e,a){
+            if(e != null) {
+               document.getElementById("dbg").value="Get my accounts failed! err: "+e;
+               alert("Get my accounts failed: "+e);
+               gameCreator="";
+               gamer="";
+               //prompt("Get my accounts failed: "+e);
+            }else{
+               document.getElementById("dbg").value="Get my accounts ok:"+a;
+               alert("Get my accounts ok:"+a[0]);
+               //prompt("Get my accounts ok "+a[0],"ok");
+               //console.log(a[0]);
+               myContract.createGame.sendTransaction(amount,{from:a[0],gas:500000000,value:amount},function(err,hash){
+                   if(err != null) {
+                       document.getElementById("dbg").value="Create game failed!" + err;
+                       gameCreator="";
+                       gamer="";
+                   }
+                   else {
+                       console.log(hash);
+                       gameCreator=a[0];
+                       gamer=a[0];
+                       document.getElementById("dbg").value="Create game successfully!";
+                       var gl = document.getElementById("gameList");
+                       var option=document.createElement("option");
+		       option.text=""+a[0];
+                       try{
+		       // 对于更早的版本IE8
+		           gl.add(option,gl.options[null]);
+		       }catch (e){
+		           gl.add(option,null);
+		       }
+                   }
+               });
+            }});
+}
+
+function joinGame(){
+	var sel_obj = document.getElementById("gameList");
+	var index   = sel_obj.selectedIndex;
+        var creator = sel_obj.options[index].text;//get game creator here
+        gameCreator=creator;
+        alert(creator);
+
+        web3.eth.getAccounts(function(e,a){
+            if(e != null) {
+               document.getElementById("dbg").value="Get my accounts failed! err: "+e;
+               prompt("Get my accounts failed! Err :"+e);
+               gameCreator="";
+            }else{
+               document.getElementById("dbg").value="Get my accounts ok:"+a;
+               console.log(a[0]);
+               gamer=a[0];
+               prompt("Get my accounts successfully! a[0] : "+a[0]);
+               myContract.joinGame.sendTransaction(creator,{from:a[0]},function(err,hash){
+                   if(err != null) document.getElementById("dbg").value="Join game failed!" + err;
+                   else {
+                       console.log(hash);
+                       document.getElementById("dbg").value="Join game successfully!";
+                   }
+               });
+            }});
+} 
+
+function startGame(){
+        myContract.startGame(function(err,description){
+            if(err != null){
+                alert("Start game failed! err:"+err);
+            }else{
+                alert("Start game successfully! "+description);
+            }
+         });
+}
+
+	function random(){
+		document.getElementById("mycube").style.transition="2s all ease-in-out"
+			document.getElementById("mycube").style.transform = "rotatex("+getRandom(7000,14000)+"deg) rotatey("+getRandom(7000,14000)+"deg) rotatez("+getRandom(7000,14000)+"deg)scale3d(1,1,1)"
+			setTimeout(()=>{
+					document.getElementById("mycube").style.transition="none"
+					},2000)
+	}
+	function getRandom(min,max){
+		//var num=Math.floor(Math.random()*(max-min)+min)
+                myContract.getRandom(function(err,result){
+                    if(err != null){
+                        console.log("get random failed! err = "+err);
+                        return 0;
+                    }else {
+		    var num=Math.floor(myContract.getLotteryRand()*(max-min)+min)
+		    return num-num%90+5
+	}
+        });}
+
+	</script>
+		</head>
+
+		<body>
+		<p style="line-height:100%"> 
+		<div class="parentDiv" style="line-height: 2px;overflow: auto;width: 30%;float: right;" id="parentDiv">
+
+		<div id="paragraphOne" style="float: right;margin-top: 3px" align="right">
 		<span style="padding-left: 1em">
 		Game Deposit</span>
 		<input type="number" name="deposit" min="50000" minlength="15" id="abc" style="margin-bottom: 3px">
-		<button onclick="showGameCtrl()" style="width: 100px">confirm</button>   
+		<button onclick="deposit()" style="width: 100px">confirm</button>   
 		<button onclick="random()" style="width: 100px;margin-bottom: 3px">掷色子</button>
-        <br></br>
-        <input type="text" id="dbg" minlength="90" style="margin-bottom: 3px"> 
-        <span style="padding-left: 1em">
+		<br></br>
+		<input type="text" id="dbg" minlength="90" style="margin-bottom: 3px"> 
+		<span style="padding-left: 1em">
 		Withdraw Amount</span>
 		<input type="number" name="withdraw" minlength="15" id="efg">
-		<button style="width: 100px;margin-bottom: 3px;margin-top: 3px">confirm</button><br> <!-- deposit/widthdraw fail/success pop up notifications -->
+		<button onclick="withdraw()" style="width: 100px;margin-bottom: 3px;margin-top: 3px">confirm</button><br> <!-- deposit/widthdraw fail/success pop up notifications -->
 		<HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" width="100%" color=#987cb9 SIZE=3>
-	</div><!-- paragraphOne -->
-            <!-- div id="leftPane" style="line-height: 30px;overflow: auto;" align="right"-->	
-            <div align="right" style="margin: 0px 3px 9px">
-            	<span style="padding-left: 1em">Game wager</span>
-        	    <input type="number" name="wager" min="50000" minlength="15">
-            	<button style="width: 100px;">create game</button><br>
-            </div>
-            
-            <div align="right" style="margin: 4px 3px">
-            	<span style="padding-left: 1em;"></span>
-                <p style="margin-bottom:10px">Availabe Game</p>
-            	<select id="gameList" multiple="false" onchange="winSizeAndDispStartGame()" style="width: 300px;margin-bottom:5px">
-            	<option >Creator: 0x11223344556677889900AABBCCDDEEFF</option>
-            	<option selected="selected">Creator: 0x11223344556677889900AABBCCDDFFFF</option>
-            	<option >Creator: 0x11223344556677889900AABBCCFFFFFF</option>
-            	<option >Creator: 0x11223344556677889900AABBFFFFFFFF</option>
-            	<option >Creator: 0x11223344556677889900AAFFFFFFFFFF</option>
-            	<option >Creator: 0x11223344556677889900FFFFFFFFFFFF</option>
-		</select>
-            	<button style="width: 100px;margin-bottom: 3px">join game</button><br>
-            </div>
-            
-            <div id="dynStartGame";style="margin-top:10px">
-            <div align="right" style="margin: 5px 5px 9px">Incomming gamers ...</div>
-            <ol id="joiner" style="line-height: 18px;margin: 5px 5px;" type="1">
-            	<li>Gamer:0x11223344556677889900AABBCCDDEEFF</li>
-            	<li>Gamer:0x11223344556677889900AABBCCDDFFFF</li>
-            	<li>Gamer:0x11223344556677889900AABBCCFFFFFF</li>
-            	<li>Gamer:0x11223344556677889900AABBFFFFFFFF</li>
-            	<li>Gamer:0x11223344556677889900AAFFFFFFFFFF</li>
-            	<li>Gamer:0x11223344556677889900FFFFFFFFFFFF</li>
-            </ol>
-            
-            <div align="right" style="margin: 0px 5px">
-				<span style="padding-left: 1em"></span>Are you ready? 
-            	<button id="start" style="width: 100px;margin: 0px auto">start</button>
-            </div>
-            </div><!-- dynStartGame -->
-            <!-- /div --><!-- leftPane -->
-        </div> <!--  parentDiv -->
-    
-
-    <section>
-        <div id="dice" class="wrapper w2" style="float: left; width: 68%;height: 100%">
- 			<div class="cube" id="mycube">
-  			正面
-      		<div class="side  front">
-      			<!-- 1 -->
-      			<div class="first_face">
-					<span class="pip"></span>
-				</div>
-      		</div>
-      		<div class="side   back">
-      			<!-- 6 -->
-      			<div class="sixth_face">
-					<div class="column">
-						<span class="pip"></span>
-						<span class="pip"></span>
-						<span class="pip"></span>
-					</div>
-					<div class="column">
-						<span class="pip"></span>
-						<span class="pip"></span>
-						<span class="pip"></span>
-					</div>
-				</div>
-      		</div>
-      		<div class="side  right">
-      			<!-- 4 -->
-      			<div class="forth_face">
-					<div class="column">
-						<span class="pip"></span>
-						<span class="pip"></span>
-					</div>
-					<div class="column">
-						<span class="pip"></span>
-						<span class="pip"></span>
-					</div>
-				</div>
-      		</div>
-      		<div class="side   left">
-      			<!-- 3 -->
-      			<div class="third_face">
-					<span class="pip flex_start"></span>
-					<span class="pip"></span>
-					<span class="pip flex_end"></span>
-				</div>
-      		</div>
-      		<div class="side    top">
-      			<!-- 5 -->
-      			<div class="fifth_face">
-					<div class="column">
-						<span class="pip flex_end"></span>
-						<span class="pip flex_end"></span>
-					</div>
-					<div class="column">
-						<span class="pip center"></span>
-					</div>
-					<div class="column">
-						<span class="pip flex_start"></span>
-						<span class="pip flex_start"></span>
-					</div>
-				</div>
-      		</div>
-      		<div class="side bottom">
-      			<!-- 2 -->
-      			<div class="second_face">
-					<span class="pip flex_start"></span>
-					<span class="pip flex_end"></span>
-				</div>				
-      		</div>
-  			</div>
+		</div><!-- paragraphOne -->
+		<!-- div id="leftPane" style="line-height: 30px;overflow: auto;" align="right"-->	
+		<div align="right" style="margin: 0px 3px 9px">
+		<span style="padding-left: 1em">Game wager</span>
+		<input type="number" id="wager" min="50000" minlength="15">
+		<button onclick="createGame()" style="width: 100px;">create game</button><br>
 		</div>
-	</section>
-   	</p>
-</body>
-</html>
- 
+
+		<div align="right" style="margin: 4px 3px">
+		<span style="padding-left: 1em;"></span>
+		<p style="margin-bottom:10px">Availabe Game</p>
+		<select id="gameList" multiple="false" onchange="winSizeAndDispStartGame()" style="width: 300px;margin-bottom:5px">
+<!--
+		<option >Creator: 0x11223344556677889900AABBCCDDEEFF</option>
+		<option selected="selected">Creator: 0x11223344556677889900AABBCCDDFFFF</option>
+		<option >Creator: 0x11223344556677889900AABBCCFFFFFF</option>
+		<option >Creator: 0x11223344556677889900AABBFFFFFFFF</option>
+		<option >Creator: 0x11223344556677889900AAFFFFFFFFFF</option>
+		<option >Creator: 0x11223344556677889900FFFFFFFFFFFF</option>-->
+		</select>  
+		<button onclick="joinGame()" style="width: 100px;margin-bottom: 3px">join game</button><br>
+		</div>
+
+		<div id="dynStartGame";style="margin-top:10px">
+		<div align="right" style="margin: 5px 5px 9px">Incomming gamers ...</div>
+		<ol id="joiner" style="line-height: 18px;margin: 5px 5px;" type="1">
+		<!--li>Gamer:0x11223344556677889900AABBCCDDEEFF</li>
+		<li>Gamer:0x11223344556677889900AABBCCDDFFFF</li>
+		<li>Gamer:0x11223344556677889900AABBCCFFFFFF</li>
+		<li>Gamer:0x11223344556677889900AABBFFFFFFFF</li>
+		<li>Gamer:0x11223344556677889900AAFFFFFFFFFF</li>
+		<li>Gamer:0x11223344556677889900FFFFFFFFFFFF</li -->
+		</ol>
+
+		<div align="right" style="margin: 0px 5px">
+		<span style="padding-left: 1em"></span>Are you ready? 
+		<button id="start" onclick="startGame()"  style="width: 100px;margin: 0px auto">start</button>
+		</div>
+		</div><!-- dynStartGame -->
+		<!-- /div --><!-- leftPane -->
+		</div> <!--  parentDiv -->
+
+
+		<section>
+		<div id="dice" class="wrapper w2" style="float: left; width: 68%;height: 100%">
+		<div class="cube" id="mycube">
+		正面
+		<div class="side  front">
+		<!-- 1 -->
+		<div class="first_face">
+		<span class="pip"></span>
+		</div>
+		</div>
+		<div class="side   back">
+		<!-- 6 -->
+		<div class="sixth_face">
+		<div class="column">
+		<span class="pip"></span>
+		<span class="pip"></span>
+		<span class="pip"></span>
+		</div>
+		<div class="column">
+		<span class="pip"></span>
+		<span class="pip"></span>
+		<span class="pip"></span>
+		</div>
+		</div>
+		</div>
+		<div class="side  right">
+		<!-- 4 -->
+		<div class="forth_face">
+		<div class="column">
+		<span class="pip"></span>
+		<span class="pip"></span>
+		</div>
+		<div class="column">
+		<span class="pip"></span>
+		<span class="pip"></span>
+		</div>
+		</div>
+		</div>
+		<div class="side   left">
+		<!-- 3 -->
+		<div class="third_face">
+		<span class="pip flex_start"></span>
+		<span class="pip"></span>
+		<span class="pip flex_end"></span>
+		</div>
+		</div>
+		<div class="side    top">
+		<!-- 5 -->
+		<div class="fifth_face">
+		<div class="column">
+		<span class="pip flex_end"></span>
+		<span class="pip flex_end"></span>
+		</div>
+		<div class="column">
+		<span class="pip center"></span>
+		</div>
+		<div class="column">
+		<span class="pip flex_start"></span>
+		<span class="pip flex_start"></span>
+		</div>
+		</div>
+		</div>
+		<div class="side bottom">
+		<!-- 2 -->
+		<div class="second_face">
+		<span class="pip flex_start"></span>
+		<span class="pip flex_end"></span>
+		</div>				
+		</div>
+		</div>
+		</div>
+		</section>
+		</p>
+		</body>
+		</html>
+

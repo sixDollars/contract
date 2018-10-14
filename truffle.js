@@ -20,7 +20,7 @@ module.exports = {
        host: "10.0.2.15",
        port: 8545,
        network_id: 20100605,
-       gas: 50000000,
+       gas: 500000000,
        gasPrice: 180000000
     },
     lottery1: {
