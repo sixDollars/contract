@@ -47,7 +47,7 @@ bool locked;
 
 constructor() public { 
     creator = msg.sender;
-    contractAccount = address(0xd87d0260ad8bfb07c5858eab37c54f42a49e39ff);
+    contractAccount = address(0x2b5bbb7233d183034681af7b5e3efc1792236d1f);
     m_lotteryCtrl.fatalErr                   = false;
     m_lotteryCtrl.maxAllowedWagerPerGame     = 10000000;
     m_lotteryCtrl.maxAllowedWagerForContract = 5000000;
@@ -214,17 +214,21 @@ function createGame(uint allowedWager)  public payable balanceSufficient(msg.sen
     return true;
 } 
 
-function getGameList() public view returns(address[] gameList){
-   uint tmp = 0;
+function getGameList() public  returns(address[]){
    emit gamblerEvent(msg.sender, now, games.length, "Create a game with wager successfully!");
+ 
+   return games;
+/*
    for(uint idx = 0; idx < games.length; idx++)
    {
       emit gamblerEvent(msg.sender, now, gameGrpDB[games[idx]].gameStartTime, "Create a game with wager successfully!");
       if(gameGrpDB[games[idx]].gameStartTime == 0) {
-        gameList[tmp]=games[idx];
-        tmp += 1;
+        list.push(games[idx]);
+        //tmp += 1;
       }
    }
+   return list;
+*/
 }
 
 function transferToContract(uint amount) public noReentrancy balanceSufficient(msg.sender, amount) payable returns(bool) {
